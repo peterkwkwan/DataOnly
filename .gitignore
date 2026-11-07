@@ -1,0 +1,15 @@
+node_modules
+.pnpm-store
+dist
+.next
+.expo
+.turbo
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+figma-make
+apps/mobile/.expo
+apps/web/.next
+*.tsbuildinfo
