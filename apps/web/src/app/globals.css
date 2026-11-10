@@ -1,0 +1,217 @@
+/* Link resets so Make button styles apply to Next.js Links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.desktop-nav a,
+.bottom-nav a,
+.mobile-menu a,
+footer a {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+}
+
+.desktop-nav a {
+  color: #68716d;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+
+.desktop-nav a.active {
+  color: var(--ink);
+}
+
+.desktop-nav a.active:after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ink);
+}
+
+.brand-button {
+  display: inline-flex;
+}
+
+.datacut-card {
+  position: relative;
+}
+
+.datacut-card .art-wrap {
+  display: block;
+}
+
+.datacut-card .save-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+}
+
+.datacut-card h3 a:hover {
+  text-decoration: underline;
+}
+
+.buy-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(16, 27, 24, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.buy-modal {
+  width: min(440px, 100%);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--shadow-2);
+  position: relative;
+}
+
+.buy-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+}
+
+.buy-modal h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: -1px;
+  margin: 8px 0 12px;
+}
+
+.buy-license {
+  background: var(--color-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.buy-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+  padding: 60px 5vw 90px;
+}
+
+.detail-art {
+  border-radius: 18px;
+  min-height: 360px;
+  overflow: hidden;
+  position: relative;
+}
+
+.detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detail-panel h1 {
+  font-family: var(--font-display);
+  font-size: 42px;
+  letter-spacing: -2px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.detail-price {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+}
+
+.search-page,
+.saved-page {
+  padding: 60px 5vw 90px;
+}
+
+.search-form {
+  display: flex;
+  gap: 10px;
+  margin: 24px 0 36px;
+}
+
+.search-form input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: white;
+}
+
+.empty-hint {
+  color: var(--muted);
+  margin-top: 24px;
+}
+
+@media (max-width: 900px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-row a,
+.filter-row button {
+  /* shared via Make .filter-row button rules when present */
+}
+
+.filter-row a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.link-button,
+.lime-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.category-card {
+  text-align: left;
+  color: inherit;
+}
+
+.mini-creator {
+  color: inherit;
+}
+
+.store-cover {
+  display: block;
+}
