@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@dataonly/core": "workspace:*",
+    "@dataonly/core": "*",
     "expo": "~58.0.23",
     "expo-constants": "~58.0.15",
     "expo-font": "~58.0.11",

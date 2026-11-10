@@ -12,23 +12,22 @@ Visual source: [Figma Make — DataOnly](https://www.figma.com/make/LmfXZLjhEh2T
 | `apps/mobile` | Expo + Expo Router (TypeScript) — iOS/Android |
 | `packages/core` | Shared types, mock catalog, `CatalogRepository` |
 
-Package manager: **pnpm** workspaces.
+Package manager: **npm** workspaces.
 
 ## Prerequisites
 
 - Node.js 20+ (22 recommended)
-- pnpm 10+
+- npm 10+ (comes with Node)
 - For mobile: Expo Go on a device, or iOS Simulator / Android emulator
 
 ```bash
-npm install -g pnpm   # if needed
-pnpm install
+npm install
 ```
 
 ## Run web
 
 ```bash
-pnpm dev:web
+npm run dev:web
 # → http://localhost:3000
 ```
 
@@ -39,7 +38,7 @@ At ≤760px width the Make mobile shell replaces the desktop portal (same mock d
 ## Run mobile
 
 ```bash
-pnpm dev:mobile
+npm run dev:mobile
 # Expo Dev Tools — press i / a, or scan the QR code with Expo Go
 ```
 
@@ -54,8 +53,8 @@ Same mock catalog via `@dataonly/core`. Tabs: Home, Explore, Creators, Saved (+ 
 ## Scripts
 
 ```bash
-pnpm dev:web          # Next.js
-pnpm dev:mobile       # Expo
-pnpm build:web        # Production web build
-pnpm typecheck        # Workspace typecheck (where configured)
+npm run dev:web          # Next.js
+npm run dev:mobile       # Expo
+npm run build:web        # Production web build
+npm run typecheck        # Workspace typecheck (where configured)
 ```
