@@ -3,26 +3,28 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
-import { catalog } from "@/lib/catalog";
+import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  return catalog.getCreators().map((c) => ({ slug: c.slug }));
+  return mockCatalog.getCreators().map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const creator = catalog.getCreatorBySlug(slug);
+  const catalog = await getCatalog();
+  const creator = await catalog.getCreatorBySlug(slug);
   return { title: creator?.name ?? "Creator" };
 }
 
 export default async function CreatorStorefrontPage({ params }: Props) {
   const { slug } = await params;
-  const creator = catalog.getCreatorBySlug(slug);
+  const catalog = await getCatalog();
+  const creator = await catalog.getCreatorBySlug(slug);
   if (!creator) notFound();
 
-  const cuts = catalog.getDatacuts({ creatorId: creator.id });
+  const cuts = await catalog.getDatacuts({ creatorId: creator.id });
 
   return (
     <section className="page-view creators-view">

@@ -2,17 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DatacutDetailClient } from "@/components/datacut-detail-client";
-import { catalog } from "@/lib/catalog";
+import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  return catalog.getDatacuts().map((c) => ({ slug: c.slug }));
+  return mockCatalog.getDatacuts().map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const cut = catalog.getDatacutBySlug(slug);
+  const catalog = await getCatalog();
+  const cut = await catalog.getDatacutBySlug(slug);
   return {
     title: cut?.title ?? "Datacut",
     description: cut?.description,
@@ -21,10 +22,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DatacutDetailPage({ params }: Props) {
   const { slug } = await params;
-  const cut = catalog.getDatacutBySlug(slug);
+  const catalog = await getCatalog();
+  const cut = await catalog.getDatacutBySlug(slug);
   if (!cut) notFound();
-  const creator = catalog.getCreators().find((c) => c.id === cut.creatorId);
-  const category = catalog.getCategories().find((c) => c.id === cut.categoryId);
+  const creators = await catalog.getCreators();
+  const categories = await catalog.getCategories();
+  const creator = creators.find((c) => c.id === cut.creatorId);
+  const category = categories.find((c) => c.id === cut.categoryId);
 
   return (
     <>

@@ -3,30 +3,32 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DatacutCard } from "@/components/datacut-card";
 import { Icon } from "@/components/icons";
-import { catalog } from "@/lib/catalog";
+import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  return catalog.getCategories().map((c) => ({ slug: c.slug }));
+  return mockCatalog.getCategories().map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = catalog.getCategoryBySlug(slug);
+  const catalog = await getCatalog();
+  const category = await catalog.getCategoryBySlug(slug);
   return { title: category?.name ?? "Category" };
 }
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
-  const category = catalog.getCategoryBySlug(slug);
+  const catalog = await getCatalog();
+  const category = await catalog.getCategoryBySlug(slug);
   if (!category) notFound();
 
-  const categories = catalog.getCategories();
-  const top = catalog.getTopDatacuts().filter((c) => c.categoryId === category.id);
-  const popular = catalog.getPopularDatacuts().filter((c) => c.categoryId === category.id);
-  const all = catalog.getDatacuts({ categoryId: category.id });
-  const visible = all.length ? all : catalog.getDatacuts();
+  const categories = await catalog.getCategories();
+  const top = (await catalog.getTopDatacuts()).filter((c) => c.categoryId === category.id);
+  const popular = (await catalog.getPopularDatacuts()).filter((c) => c.categoryId === category.id);
+  const all = await catalog.getDatacuts({ categoryId: category.id });
+  const visible = all.length ? all : await catalog.getDatacuts();
 
   return (
     <section className="page-view">

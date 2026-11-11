@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/brand";
 import { Icon } from "@/components/icons";
+import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
 import { MobileShell } from "@/components/mobile-shell";
 
@@ -17,6 +18,7 @@ const NAV = [
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { savedIds } = useSaved();
+  const { user, signOut, isAdmin, configured } = useAuth();
   const [mobileMenu, setMobileMenu] = useState(false);
 
   return (
@@ -42,12 +44,28 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               <Icon name="bookmark" size={19} />
               <span className="save-count">{savedIds.length}</span>
             </Link>
-            <button type="button" className="text-button">
-              Sign in
-            </button>
-            <button type="button" className="primary-button small">
+            {user ? (
+              <>
+                <Link className="text-button" href="/dashboard">
+                  Dashboard
+                </Link>
+                {isAdmin ? (
+                  <Link className="text-button" href="/admin/verification">
+                    Admin
+                  </Link>
+                ) : null}
+                <button type="button" className="text-button" onClick={() => void signOut()}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link className="text-button" href="/auth/sign-in">
+                Sign in
+              </Link>
+            )}
+            <Link className="primary-button small" href={configured ? "/dashboard" : "/auth/sign-in"}>
               Start selling <Icon name="arrow" size={16} />
-            </button>
+            </Link>
             <button
               type="button"
               className="menu-button"
@@ -72,10 +90,27 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             <Link href="/search" onClick={() => setMobileMenu(false)}>
               Search
             </Link>
-            <button type="button">Sign in</button>
-            <button type="button" className="primary-button">
+            <Link href="/dashboard" onClick={() => setMobileMenu(false)}>
+              Dashboard
+            </Link>
+            {user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenu(false);
+                  void signOut();
+                }}
+              >
+                Sign out
+              </button>
+            ) : (
+              <Link href="/auth/sign-in" onClick={() => setMobileMenu(false)}>
+                Sign in
+              </Link>
+            )}
+            <Link className="primary-button" href="/dashboard" onClick={() => setMobileMenu(false)}>
               Start selling
-            </button>
+            </Link>
           </div>
         )}
 

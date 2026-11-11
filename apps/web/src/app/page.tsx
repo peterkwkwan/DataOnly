@@ -3,12 +3,13 @@ import { Verified } from "@/components/brand";
 import { DatacutSection } from "@/components/datacut-card";
 import { HeroSearch } from "@/components/hero-search";
 import { Icon, IndustryIcon } from "@/components/icons";
-import { catalog } from "@/lib/catalog";
+import { getCatalog } from "@/lib/catalog";
 
-export default function HomePage() {
-  const categories = catalog.getCategories();
-  const creators = catalog.getCreators().filter((c) => c.verified);
-  const popular = catalog.getPopularDatacuts();
+export default async function HomePage() {
+  const catalog = await getCatalog();
+  const categories = await catalog.getCategories();
+  const creators = (await catalog.getCreators()).filter((c) => c.verified);
+  const popular = await catalog.getPopularDatacuts();
 
   return (
     <>

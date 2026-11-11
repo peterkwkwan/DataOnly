@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SiteChrome } from "@/components/site-chrome";
+import { AuthProvider } from "@/context/auth-context";
 import { SavedProvider } from "@/context/saved-context";
 import "@/styles/dataonly.css";
 import "./globals.css";
@@ -17,9 +18,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <SavedProvider>
-          <SiteChrome>{children}</SiteChrome>
-        </SavedProvider>
+        <AuthProvider>
+          <SavedProvider>
+            <SiteChrome>{children}</SiteChrome>
+          </SavedProvider>
+        </AuthProvider>
       </body>
     </html>
   );

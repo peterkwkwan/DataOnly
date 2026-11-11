@@ -1,0 +1,13 @@
+# Minimal Supabase CLI config for local/linked projects (optional).
+# Alpha setup can use the SQL editor only — see README.
+
+project_id = "data-only"
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]

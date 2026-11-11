@@ -2,15 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DatacutCard } from "@/components/datacut-card";
 import { Icon } from "@/components/icons";
-import { catalog } from "@/lib/catalog";
+import { getCatalog } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Explore",
 };
 
-export default function ExplorePage() {
-  const categories = catalog.getCategories();
-  const cuts = catalog.getTopDatacuts(8);
+export default async function ExplorePage() {
+  const catalog = await getCatalog();
+  const categories = await catalog.getCategories();
+  const cuts = await catalog.getTopDatacuts(8);
 
   return (
     <section className="page-view">

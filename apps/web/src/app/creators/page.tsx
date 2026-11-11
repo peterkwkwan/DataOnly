@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Verified } from "@/components/brand";
 import { Icon } from "@/components/icons";
-import { catalog } from "@/lib/catalog";
+import { getCatalog } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Creators",
 };
 
-export default function CreatorsPage() {
-  const creators = catalog.getCreators();
+export default async function CreatorsPage() {
+  const catalog = await getCatalog();
+  const creators = await catalog.getCreators();
 
   return (
     <section className="page-view creators-view">

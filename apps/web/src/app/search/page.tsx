@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
 import { SearchBox } from "@/components/search-box";
-import { catalog } from "@/lib/catalog";
+import { getCatalog } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Search",
@@ -13,19 +13,22 @@ type Props = { searchParams: Promise<{ q?: string }> };
 
 export default async function SearchPage({ searchParams }: Props) {
   const { q = "" } = await searchParams;
-  const results = catalog.search(q);
+  const catalog = await getCatalog();
+  const results = await catalog.search(q);
   const empty =
     q.trim().length > 0 &&
     results.datacuts.length === 0 &&
     results.creators.length === 0 &&
     results.categories.length === 0;
+  const categories = await catalog.getCategories();
+  const creators = await catalog.getCreators();
 
   return (
     <section className="search-page page-view">
       <div className="page-intro">
         <span className="kicker">Search</span>
         <h1>{q ? `Results for “${q}”` : "Search DataOnly"}</h1>
-        <p>Autocomplete covers categories, industries, creators, and datacuts from the mock catalog.</p>
+        <p>Search categories, industries, creators, and datacuts from the live or mock catalog.</p>
       </div>
       <SearchBox initialQuery={q} />
       {empty ? (
@@ -33,15 +36,14 @@ export default async function SearchPage({ searchParams }: Props) {
           <h3>No matches</h3>
           <p>Try a popular category or verified creator.</p>
           <div className="filter-row" style={{ marginTop: 20 }}>
-            {catalog.getCategories().slice(0, 4).map((c) => (
+            {categories.slice(0, 4).map((c) => (
               <Link key={c.id} href={`/explore/${c.slug}`}>
                 {c.name}
               </Link>
             ))}
           </div>
           <div className="creator-store-grid" style={{ marginTop: 28 }}>
-            {catalog
-              .getCreators()
+            {creators
               .filter((c) => c.verified)
               .map((creator, index) => (
                 <Link

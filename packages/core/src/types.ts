@@ -8,6 +8,19 @@ export type IndustryIconName =
 
 export type LicenseTemplate = "personal" | "commercial";
 
+export type ListingStatus = "draft" | "published";
+
+export type VerificationStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "needs_more_info"
+  | "approved"
+  | "rejected"
+  | "revoked";
+
+export type ProfileRole = "user" | "creator" | "admin";
+
 export interface Category {
   id: string;
   name: string;
@@ -27,9 +40,13 @@ export interface Creator {
   followers: string;
   initials: string;
   color: string;
-  /** v0: mock verified creators only — no real apply form */
+  /** Verified badge from application flow or admin override */
   verified: boolean;
   bio: string;
+  /** Linked auth user when creator owns an account (Alpha+) */
+  userId?: string | null;
+  verifiedAt?: string | null;
+  revokedAt?: string | null;
 }
 
 export interface Datacut {
@@ -52,6 +69,8 @@ export interface Datacut {
   license: LicenseTemplate;
   licenseBlurb: string;
   description: string;
+  /** Public catalog only includes published; owners see drafts in dashboard */
+  status?: ListingStatus;
 }
 
 export interface AutocompleteSuggestion {
@@ -59,4 +78,50 @@ export interface AutocompleteSuggestion {
   label: string;
   href: string;
   subtitle?: string;
+}
+
+export interface Profile {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+  role: ProfileRole;
+  createdAt: string;
+}
+
+export interface VerificationApplication {
+  id: string;
+  creatorId: string;
+  status: VerificationStatus;
+  identity: string;
+  industries: string[];
+  portfolioLinks: string[];
+  credentials: string | null;
+  attestationAcceptedAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+  infoRequestNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DatacutWriteInput {
+  title: string;
+  slug: string;
+  categoryId: string;
+  price: number;
+  size: string;
+  records: string;
+  format: string;
+  license: LicenseTemplate;
+  description: string;
+  accent?: string;
+  art?: string;
+  status?: ListingStatus;
+}
+
+export interface SupabasePublicEnv {
+  url: string;
+  anonKey: string;
 }
