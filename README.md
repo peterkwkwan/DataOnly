@@ -60,13 +60,13 @@ Do this in the [Supabase dashboard](https://supabase.com/dashboard) — this rep
    - Redirect URLs: `http://localhost:3000/auth/callback`
 5. **Project Settings → API** — copy:
    - Project URL
-   - `anon` `public` key  
+   - Publishable key (legacy UI label: `anon` `public`)  
    Do **not** put the `service_role` key in Next.js public env.
 6. Create `apps/web/.env.local` from `apps/web/.env.example`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
 7. Restart `npm run dev:web`. Public catalog pages read published rows from Supabase; if env is missing or queries fail, they fall back to mock.
@@ -82,7 +82,7 @@ where email = 'you@example.com';
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
 Helper reminder script (prints the same steps):
@@ -96,9 +96,9 @@ npm run seed:help
 | Variable | Where | Purpose |
 |----------|--------|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `apps/web/.env.local` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `apps/web/.env.local` | Public anon key (safe for browser with RLS) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `apps/web/.env.local` | Public publishable key (safe for browser with RLS) |
 | `EXPO_PUBLIC_SUPABASE_URL` | `apps/mobile/.env` (optional) | Mobile stub |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | `apps/mobile/.env` (optional) | Mobile stub |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `apps/mobile/.env` (optional) | Mobile stub |
 
 ### What Peter creates in the dashboard
 

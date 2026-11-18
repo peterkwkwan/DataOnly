@@ -20,9 +20,9 @@ console.log(`DataOnly seed helper
    - supabase/migrations/20260311000001_rls.sql
    - supabase/seed.sql
 3. Auth → URL configuration: add http://localhost:3000/auth/callback
-4. Copy Project URL + anon public key into apps/web/.env.local:
+4. Copy Project URL + publishable key into apps/web/.env.local:
    NEXT_PUBLIC_SUPABASE_URL=...
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 5. Optional Expo stub: apps/mobile/.env with EXPO_PUBLIC_SUPABASE_*
 6. After you sign in once, promote yourself to admin:
    update profiles set role = 'admin' where email = 'you@example.com';

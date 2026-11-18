@@ -22,7 +22,7 @@ function SignInForm() {
     setError(null);
     setMessage(null);
     if (!configured) {
-      setError("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setError("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
       return;
     }
     setBusy(true);

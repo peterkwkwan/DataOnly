@@ -57,7 +57,7 @@ export default function DashboardPage() {
           <span className="kicker">Creator dashboard</span>
           <h1>Connect Supabase to manage listings</h1>
           <p>
-            Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>,
+            Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>,
             run migrations + seed, then sign in. The public catalog still works with mock data.
           </p>
           <Link className="primary-button" href="/auth/sign-in">
