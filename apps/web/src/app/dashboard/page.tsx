@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Verified } from "@/components/brand";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Creator, Datacut } from "@dataonly/core";
 import { mapDatacut, type DatacutRow } from "@dataonly/core";
@@ -39,7 +40,11 @@ export default function DashboardPage() {
         if (listError) throw listError;
         if (!cancelled) setListings(((data ?? []) as DatacutRow[]).map(mapDatacut));
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load dashboard");
+        if (!cancelled) {
+          setCreator(null);
+          setListings([]);
+          setError(formatClientError(err, "Failed to load dashboard"));
+        }
       } finally {
         if (!cancelled) setBusy(false);
       }
@@ -90,6 +95,31 @@ export default function DashboardPage() {
     );
   }
 
+  if (error && !creator) {
+    return (
+      <section className="page-view dashboard-view">
+        <div className="page-intro">
+          <span className="kicker">Creator dashboard</span>
+          <h1>Could not load dashboard</h1>
+          <p className="form-error">{error}</p>
+          <p>
+            Env can be set while the Alpha schema is still missing. Apply{" "}
+            <code>supabase/migrations</code> then <code>supabase/seed.sql</code> in the Supabase SQL
+            Editor (see README), confirm you are signed in, and reload.
+          </p>
+          <div className="dashboard-actions">
+            <button type="button" className="primary-button" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+            <Link className="text-button" href="/auth/sign-in?next=/dashboard">
+              Sign in again
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="page-view dashboard-view">
       <div className="page-intro creators-intro">
@@ -117,7 +147,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? <p className="form-error dashboard-inline-error">{error}</p> : null}
 
       <div className="results-header">
         <div>
@@ -132,7 +162,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="listing-table">
-        {listings.length === 0 ? (
+        {error ? (
+          <p className="empty-hint">Listings unavailable until the error above is fixed.</p>
+        ) : listings.length === 0 ? (
           <p className="empty-hint">No listings yet. Create a draft to get started.</p>
         ) : (
           listings.map((cut) => (

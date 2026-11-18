@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 function SignInForm() {
@@ -45,7 +46,7 @@ function SignInForm() {
         router.refresh();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed");
+      setError(formatClientError(err, "Sign-in failed"));
     } finally {
       setBusy(false);
     }
@@ -65,7 +66,7 @@ function SignInForm() {
       if (signError) throw signError;
       setMessage("Account created. Check your email to confirm if required, then sign in.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-up failed");
+      setError(formatClientError(err, "Sign-up failed"));
     } finally {
       setBusy(false);
     }

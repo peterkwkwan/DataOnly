@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { VerificationApplication } from "@dataonly/core";
 import { mapVerification, type VerificationRow } from "@dataonly/core";
@@ -38,7 +39,7 @@ export default function AdminVerificationPage() {
 
   useEffect(() => {
     if (loading || !user || !isAdmin || !isSupabaseConfigured()) return;
-    void loadQueue().catch((err) => setError(err instanceof Error ? err.message : "Failed to load queue"));
+    void loadQueue().catch((err) => setError(formatClientError(err, "Failed to load queue")));
   }, [isAdmin, loading, user]);
 
   async function act(
@@ -89,7 +90,7 @@ export default function AdminVerificationPage() {
       await loadQueue();
       await refreshProfile();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Action failed");
+      setError(formatClientError(err, "Action failed"));
     } finally {
       setBusyId(null);
     }

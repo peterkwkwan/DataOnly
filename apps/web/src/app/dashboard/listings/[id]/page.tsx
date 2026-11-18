@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ListingForm } from "@/components/listing-form";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Category, Creator, Datacut } from "@dataonly/core";
 import {
@@ -48,7 +49,7 @@ export default function EditListingPage() {
           setCut(row ? mapDatacut(row as DatacutRow) : null);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load listing");
+        if (!cancelled) setError(formatClientError(err, "Failed to load listing"));
       }
     }
     void load();

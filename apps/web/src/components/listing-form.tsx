@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import type { Category, Datacut, LicenseTemplate, ListingStatus } from "@dataonly/core";
 import { licenseBlurb } from "@dataonly/core";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type Props = {
@@ -76,7 +77,7 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(formatClientError(err, "Save failed"));
     } finally {
       setBusy(false);
     }

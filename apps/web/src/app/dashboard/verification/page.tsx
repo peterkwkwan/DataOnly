@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Verified } from "@/components/brand";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Creator, VerificationApplication } from "@dataonly/core";
 import { EXTRA_INDUSTRIES, mapVerification, type VerificationRow } from "@dataonly/core";
@@ -48,7 +49,7 @@ export default function VerificationApplyPage() {
           setCredentials(app.credentials ?? "");
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
+        if (!cancelled) setError(formatClientError(err, "Failed to load"));
       }
     }
     void load();
@@ -110,7 +111,7 @@ export default function VerificationApplyPage() {
       }
       setMessage("Application submitted. An admin will review it.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submit failed");
+      setError(formatClientError(err, "Submit failed"));
     } finally {
       setBusy(false);
     }

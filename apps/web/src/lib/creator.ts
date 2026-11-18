@@ -18,12 +18,40 @@ function initialsFrom(name: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
+/** Ensure the signed-in user has a profile row (FK target for creators.user_id). */
+async function ensureProfileForUser(
+  client: SupabaseClient,
+  user: { id: string; email?: string | null },
+  displayName?: string | null,
+) {
+  const { data: existing, error: existingError } = await client
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return;
+
+  const name =
+    displayName?.trim() ||
+    user.email?.split("@")[0] ||
+    null;
+  const { error: insertError } = await client.from("profiles").insert({
+    id: user.id,
+    email: user.email ?? null,
+    display_name: name,
+  });
+  if (insertError) throw insertError;
+}
+
 /** Ensure the signed-in user has a creator row (create on first dashboard visit). */
 export async function ensureCreatorForUser(
   client: SupabaseClient,
   user: { id: string; email?: string | null },
   displayName?: string | null,
 ): Promise<Creator> {
+  await ensureProfileForUser(client, user, displayName);
+
   const { data: existing, error: existingError } = await client
     .from("creators")
     .select("*")

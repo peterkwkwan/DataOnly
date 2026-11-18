@@ -3035,7 +3035,16 @@ footer button {
 .listing-table {
   display: grid;
   gap: 12px;
-  padding: 0 5vw 64px;
+  /* page-view already pads 5vw — keep empty hint aligned with "Your listings" */
+  padding: 0 0 64px;
+  text-align: left;
+}
+.listing-table .empty-hint {
+  margin: 0;
+  text-align: left;
+}
+.dashboard-inline-error {
+  margin: 0 0 8px;
 }
 .listing-row {
   display: flex;
@@ -3065,7 +3074,8 @@ footer button {
   gap: 8px;
 }
 .status-banner {
-  margin: 0 5vw 20px;
+  /* page-view already pads 5vw */
+  margin: 0 0 20px;
   padding: 14px 18px;
   border-radius: var(--radius-md);
   background: var(--subtle, #f0f1eb);

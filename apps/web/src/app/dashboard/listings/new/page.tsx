@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ListingForm } from "@/components/listing-form";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Category, Creator } from "@dataonly/core";
 import { mapCategory, type CategoryRow } from "@dataonly/core";
@@ -29,7 +30,7 @@ export default function NewListingPage() {
           setCategories(((data ?? []) as CategoryRow[]).map(mapCategory));
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
+        if (!cancelled) setError(formatClientError(err, "Failed to load"));
       }
     }
     void load();
