@@ -22,7 +22,9 @@ export function DataOnlyTabBar({ active }: { active: TabKey }) {
       <TabButton tab={TABS[0]} active={active === "index"} />
       <TabButton tab={TABS[1]} active={active === "explore"} />
       <Pressable style={styles.search} onPress={() => router.push("/search")} accessibilityLabel="Search">
-        <Glyph name="search" size={20} color={colors.signal} />
+        <View style={styles.searchIcon}>
+          <Glyph name="search" size={20} color={colors.signal} />
+        </View>
       </Pressable>
       <TabButton tab={TABS[2]} active={active === "creators"} />
       <TabButton
@@ -54,7 +56,7 @@ function TabButton({
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#dbe0d8",
     backgroundColor: "rgba(250,251,247,0.97)",
@@ -66,9 +68,8 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: 3,
-    paddingBottom: 4,
   },
   label: {
     fontSize: 8,
@@ -81,16 +82,20 @@ const styles = StyleSheet.create({
   search: {
     width: 49,
     height: 49,
-    marginTop: -20,
-    marginBottom: 4,
     borderRadius: 25,
     backgroundColor: colors.ink,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.ink,
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  searchIcon: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

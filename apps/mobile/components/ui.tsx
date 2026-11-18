@@ -60,7 +60,17 @@ export function Glyph({
     );
   }
   return (
-    <Text style={{ fontSize: size * 0.9, color, fontWeight: filled ? "800" : "600", lineHeight: size }}>
+    <Text
+      style={{
+        fontSize: size * 0.9,
+        color,
+        fontWeight: filled ? "800" : "600",
+        lineHeight: size,
+        textAlign: "center",
+        includeFontPadding: false,
+        textAlignVertical: "center",
+      }}
+    >
       {GLYPHS[name]}
     </Text>
   );
