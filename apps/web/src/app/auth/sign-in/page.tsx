@@ -76,10 +76,6 @@ function SignInForm() {
       <div className="page-intro">
         <span className="kicker">Account</span>
         <h1>Sign in</h1>
-        <p>
-          Magic link or email + password via Supabase Auth. Without env vars the marketplace still
-          runs on the mock catalog.
-        </p>
       </div>
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="auth-tabs">

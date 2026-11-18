@@ -2938,18 +2938,24 @@ footer button {
 .listing-form,
 .auth-card {
   max-width: 560px;
-  margin: 0 5vw 64px;
+  margin: 0 0 64px;
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: #fff;
   display: grid;
   gap: 16px;
+  align-items: stretch;
+  justify-items: stretch;
 }
 .auth-card label,
 .listing-form label {
   display: grid;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
   font-size: 14px;
   color: var(--muted);
 }
@@ -2959,7 +2965,10 @@ footer button {
 .listing-form input,
 .listing-form select,
 .listing-form textarea {
+  display: block;
   width: 100%;
+  min-width: 0;
+  margin: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 12px 14px;
@@ -2969,6 +2978,9 @@ footer button {
 .auth-tabs {
   display: flex;
   gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 .auth-tabs button {
   border: 1px solid var(--line);
@@ -2983,9 +2995,18 @@ footer button {
 }
 .form-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  flex-wrap: nowrap;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+.auth-card .form-actions .primary-button,
+.listing-form .form-actions .primary-button {
+  width: 100%;
+  display: flex;
 }
 .form-grid {
   display: grid;
