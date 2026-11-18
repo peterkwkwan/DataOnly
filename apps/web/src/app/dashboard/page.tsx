@@ -7,13 +7,23 @@ import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Creator, Datacut } from "@dataonly/core";
-import { mapDatacut, type DatacutRow } from "@dataonly/core";
+import type { Creator, Datacut, VerificationApplication } from "@dataonly/core";
+import { mapDatacut, mapVerification, type DatacutRow, type VerificationRow } from "@dataonly/core";
+
+function verificationStatusLabel(
+  creator: Creator | null,
+  application: VerificationApplication | null,
+): string {
+  if (creator?.verified) return "Verified";
+  if (application?.status) return application.status;
+  return "Not applied";
+}
 
 export default function DashboardPage() {
   const { user, profile, loading, configured, isAdmin } = useAuth();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [listings, setListings] = useState<Datacut[]>([]);
+  const [verification, setVerification] = useState<VerificationApplication | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -30,19 +40,34 @@ export default function DashboardPage() {
         const ensured = await ensureCreatorForUser(supabase, user!, profile?.displayName);
         if (cancelled) return;
         setCreator(ensured);
-        const { data, error: listError } = await supabase
-          .from("datacuts")
-          .select(
-            "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, creators(name), categories(name)",
-          )
-          .eq("creator_id", ensured.id)
-          .order("updated_at", { ascending: false });
+        const [{ data, error: listError }, { data: verificationData }] = await Promise.all([
+          supabase
+            .from("datacuts")
+            .select(
+              "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, creators(name), categories(name)",
+            )
+            .eq("creator_id", ensured.id)
+            .order("updated_at", { ascending: false }),
+          supabase
+            .from("verification_applications")
+            .select("*")
+            .eq("creator_id", ensured.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
         if (listError) throw listError;
-        if (!cancelled) setListings(((data ?? []) as DatacutRow[]).map(mapDatacut));
+        if (!cancelled) {
+          setListings(((data ?? []) as DatacutRow[]).map(mapDatacut));
+          setVerification(
+            verificationData ? mapVerification(verificationData as VerificationRow) : null,
+          );
+        }
       } catch (err) {
         if (!cancelled) {
           setCreator(null);
           setListings([]);
+          setVerification(null);
           setError(formatClientError(err, "Failed to load dashboard"));
         }
       } finally {
@@ -122,43 +147,33 @@ export default function DashboardPage() {
 
   return (
     <section className="page-view dashboard-view">
-      <div className="page-intro creators-intro">
-        <div>
-          <span className="kicker">Creator dashboard</span>
-          <h1>{creator?.name ?? "Your store"}</h1>
-          <p>
-            Draft and publish datacuts, apply for verification, and manage your storefront.
-            {creator?.verified ? " You are Verified." : " Unverified creators can still list and sell."}
-          </p>
-          {creator?.verified ? <Verified /> : null}
-        </div>
-        <div className="dashboard-actions">
-          <Link className="primary-button" href="/dashboard/listings/new">
-            New listing
-          </Link>
-          <Link className="text-button" href="/dashboard/verification">
-            Verification
-          </Link>
-          {isAdmin ? (
-            <Link className="text-button" href="/admin/verification">
-              Admin queue
-            </Link>
-          ) : null}
-        </div>
+      <div className="page-intro">
+        <span className="kicker">Creator dashboard</span>
+        <h1>{creator?.name ?? "Your store"}</h1>
+        <p>
+          Draft and publish datacuts, apply for verification, and manage your storefront.
+          {creator?.verified ? " You are Verified." : " Unverified creators can still list and sell."}
+        </p>
+        {creator?.verified ? <Verified /> : null}
       </div>
 
       {error ? <p className="form-error dashboard-inline-error">{error}</p> : null}
 
-      <div className="results-header">
+      <div className="results-header dashboard-section-toolbar">
         <div>
           <h2>Your listings</h2>
           <span>{listings.length}</span>
         </div>
-        {creator ? (
-          <Link className="link-button" href={`/creators/${creator.slug}`}>
-            View storefront
+        <div className="dashboard-section-actions">
+          {creator ? (
+            <Link className="link-button" href={`/creators/${creator.slug}`}>
+              View storefront
+            </Link>
+          ) : null}
+          <Link className="primary-button small" href="/dashboard/listings/new">
+            New listing
           </Link>
-        ) : null}
+        </div>
       </div>
 
       <div className="listing-table">
@@ -180,6 +195,33 @@ export default function DashboardPage() {
           ))
         )}
       </div>
+
+      <section className="dashboard-verification-card" aria-labelledby="dashboard-verification-heading">
+        <div className="results-header dashboard-section-toolbar">
+          <div>
+            <h2 id="dashboard-verification-heading">Verification</h2>
+          </div>
+          <div className="dashboard-section-actions">
+            {isAdmin ? (
+              <Link className="text-button" href="/admin/verification">
+                Admin queue
+              </Link>
+            ) : null}
+            <Link className="primary-button small" href="/dashboard/verification">
+              Apply for Verified
+            </Link>
+          </div>
+        </div>
+        <p className="dashboard-verification-status">
+          <b>Status:</b> {verificationStatusLabel(creator, verification)}
+          {verification?.infoRequestNote ? (
+            <span> Info requested: {verification.infoRequestNote}</span>
+          ) : null}
+          {verification?.rejectionReason ? (
+            <span> Rejection: {verification.rejectionReason}</span>
+          ) : null}
+        </p>
+      </section>
     </section>
   );
 }
