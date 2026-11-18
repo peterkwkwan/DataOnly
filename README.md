@@ -52,8 +52,32 @@ Do this in the [Supabase dashboard](https://supabase.com/dashboard) — this rep
 1. **Create a project** and wait for it to finish provisioning.
 2. **SQL Editor** — run in order:
    - `supabase/migrations/20260311000000_init.sql` (tables, triggers)
-   - `supabase/migrations/20260311000001_rls.sql` (RLS policies)
+   - `supabase/migrations/20260311000001_rls.sql` (RLS policies + table GRANTs)
+   - `supabase/migrations/20260311000002_grants.sql` (idempotent GRANTs; required if you ran an older rls without privileges)
    - `supabase/seed.sql` (categories / creators / datacuts from mock)
+
+   **Already ran init + rls once?** Paste this in SQL Editor (same as `20260311000002_grants.sql`) — do not re-run full init:
+
+```sql
+grant usage on schema public to anon, authenticated;
+
+grant select, insert, update on public.profiles to authenticated;
+grant select on public.profiles to anon;
+
+grant select on public.categories to anon, authenticated;
+grant insert, update, delete on public.categories to authenticated;
+
+grant select on public.creators to anon, authenticated;
+grant insert, update on public.creators to authenticated;
+
+grant select on public.datacuts to anon, authenticated;
+grant insert, update, delete on public.datacuts to authenticated;
+grant usage, select on sequence public.datacuts_id_seq to anon, authenticated;
+
+grant select, insert, update, delete on public.saved to authenticated;
+
+grant select, insert, update, delete on public.verification_applications to authenticated;
+```
 3. **Authentication → Providers** — enable Email (magic link and/or password).
 4. **Authentication → URL configuration**
    - Site URL: `http://localhost:3000`
@@ -104,7 +128,7 @@ npm run seed:help
 
 - Supabase project
 - Email auth enabled + localhost redirect URL
-- Schema via the three SQL files above
+- Schema via the SQL migrations above (init → rls → grants → seed)
 - (After first login) `profiles.role = 'admin'` for review queue access
 
 Out of scope for this Alpha pass: Stripe, real payouts, file upload beyond listing metadata.

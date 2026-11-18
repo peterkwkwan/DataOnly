@@ -111,3 +111,23 @@ create policy "verification_owner_update" on public.verification_applications
 drop policy if exists "verification_admin_delete" on public.verification_applications;
 create policy "verification_admin_delete" on public.verification_applications
   for delete using (public.is_admin());
+
+-- Table privileges (RLS alone is not enough — missing GRANTs cause 42501)
+grant usage on schema public to anon, authenticated;
+
+grant select, insert, update on public.profiles to authenticated;
+grant select on public.profiles to anon;
+
+grant select on public.categories to anon, authenticated;
+grant insert, update, delete on public.categories to authenticated;
+
+grant select on public.creators to anon, authenticated;
+grant insert, update on public.creators to authenticated;
+
+grant select on public.datacuts to anon, authenticated;
+grant insert, update, delete on public.datacuts to authenticated;
+grant usage, select on sequence public.datacuts_id_seq to anon, authenticated;
+
+grant select, insert, update, delete on public.saved to authenticated;
+
+grant select, insert, update, delete on public.verification_applications to authenticated;
