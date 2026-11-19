@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
@@ -18,8 +19,11 @@ const NAV = [
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { savedIds } = useSaved();
-  const { user, signOut, isAdmin, configured } = useAuth();
+  const { user, profile, signOut, isAdmin, configured } = useAuth();
   const [mobileMenu, setMobileMenu] = useState(false);
+  const accountEmail = profile?.email || user?.email || "";
+  const accountName =
+    profile?.displayName?.trim() || accountEmail.split("@")[0] || "Account";
 
   return (
     <div className="app-shell">
@@ -54,19 +58,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 >
                   Dashboard
                 </Link>
-                {isAdmin ? (
-                  <Link
-                    className={
-                      pathname.startsWith("/admin") ? "text-button active" : "text-button"
-                    }
-                    href="/admin/verification"
-                  >
-                    Admin
-                  </Link>
-                ) : null}
-                <button type="button" className="text-button" onClick={() => void signOut()}>
-                  Sign out
-                </button>
+                <AccountMenu />
               </>
             ) : (
               <Link className="text-button" href="/auth/sign-in">
@@ -104,15 +96,28 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               Dashboard
             </Link>
             {user ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenu(false);
-                  void signOut();
-                }}
-              >
-                Sign out
-              </button>
+              <div className="mobile-account">
+                <div className="mobile-account-header">
+                  <div className="mobile-account-identity">
+                    <b>{accountName}</b>
+                    {accountEmail ? <span>{accountEmail}</span> : null}
+                  </div>
+                </div>
+                {isAdmin ? (
+                  <Link href="/admin/verification" onClick={() => setMobileMenu(false)}>
+                    Admin
+                  </Link>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenu(false);
+                    void signOut();
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
             ) : (
               <Link href="/auth/sign-in" onClick={() => setMobileMenu(false)}>
                 Sign in

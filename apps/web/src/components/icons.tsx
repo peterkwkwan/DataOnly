@@ -10,6 +10,7 @@ export type IconName =
   | "database"
   | "home"
   | "layers"
+  | "logout"
   | "menu"
   | "search"
   | "shield"
@@ -56,6 +57,12 @@ export function Icon({
       <>
         <path d="m12 2 9 5-9 5-9-5 9-5Z" />
         <path d="m3 12 9 5 9-5M3 17l9 5 9-5" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+        <path d="M14 12H21M18 8l4 4-4 4" />
       </>
     ),
     menu: (
