@@ -46,11 +46,21 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             </Link>
             {user ? (
               <>
-                <Link className="text-button" href="/dashboard">
+                <Link
+                  className={
+                    pathname.startsWith("/dashboard") ? "text-button active" : "text-button"
+                  }
+                  href="/dashboard"
+                >
                   Dashboard
                 </Link>
                 {isAdmin ? (
-                  <Link className="text-button" href="/admin/verification">
+                  <Link
+                    className={
+                      pathname.startsWith("/admin") ? "text-button active" : "text-button"
+                    }
+                    href="/admin/verification"
+                  >
                     Admin
                   </Link>
                 ) : null}
