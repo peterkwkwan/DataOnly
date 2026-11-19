@@ -54,6 +54,7 @@ Do this in the [Supabase dashboard](https://supabase.com/dashboard) — this rep
    - `supabase/migrations/20260311000000_init.sql` (tables, triggers)
    - `supabase/migrations/20260311000001_rls.sql` (RLS policies + table GRANTs)
    - `supabase/migrations/20260311000002_grants.sql` (idempotent GRANTs; required if you ran an older rls without privileges)
+   - `supabase/migrations/20260312000000_verification_sources.sql` (adds `sources jsonb` if you already ran init before this column existed)
    - `supabase/seed.sql` (categories / creators / datacuts from mock)
 
    **Already ran init + rls once?** Paste this in SQL Editor (same as `20260311000002_grants.sql`) — do not re-run full init:
@@ -141,7 +142,7 @@ Out of scope for this Alpha pass: Stripe, real payouts, file upload beyond listi
 | Auth | Magic link or email/password on Next |
 | Creator CRUD | `/dashboard` draft + publish listings |
 | Saved | `localStorage` when logged out; `saved` table when logged in |
-| Verification | Apply at `/dashboard/verification`; admin queue at `/admin/verification` |
+| Verification | Apply at `/dashboard/verification` (web) or `/verification` (Expo); admin queue at `/admin/verification`. Evidence = **Verified sources** (`sources` jsonb). |
 | Badge | `creators.verified` from DB after approve |
 
 ## Scripts

@@ -12,6 +12,8 @@ export type {
   SupabasePublicEnv,
   VerificationApplication,
   VerificationStatus,
+  VerifiedSource,
+  VerifiedSourcePlatform,
 } from "./types";
 export {
   categories,
@@ -44,3 +46,15 @@ export type {
   ProfileRow,
   VerificationRow,
 } from "./supabase/mappers";
+export {
+  emptyVerifiedSourceRow,
+  isVerifiedSourcePlatform,
+  isVerifiedSourceUrlValid,
+  normalizeVerifiedSourceUrl,
+  parseVerifiedSources,
+  validateVerifiedSources,
+  verifiedSourcePlatformLabel,
+  VERIFIED_SOURCE_PLATFORMS,
+} from "./verified-sources";
+export type { VerifiedSourcesValidation } from "./verified-sources";
+export { ensureCreatorForUser } from "./supabase/creator";

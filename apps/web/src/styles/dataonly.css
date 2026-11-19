@@ -3247,6 +3247,81 @@ footer button {
   background: #fff;
   color: var(--ink);
 }
+.verified-sources-field {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.verified-sources-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.verified-sources-rows {
+  display: grid;
+  gap: 10px;
+}
+.verified-source-row {
+  display: grid;
+  grid-template-columns: minmax(132px, 168px) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+.verified-source-row > input {
+  width: 100%;
+  min-width: 0;
+}
+.source-platform-field {
+  width: 100%;
+}
+.verified-source-remove,
+.verified-sources-add {
+  justify-self: start;
+  padding: 10px 4px;
+  white-space: nowrap;
+}
+.verified-source-remove-spacer {
+  width: 64px;
+}
+.admin-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+.admin-source-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--color-subtle);
+  color: var(--ink);
+  text-decoration: none;
+}
+.admin-source-chip:hover {
+  background: #fff;
+}
+.admin-source-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.admin-source-url {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .verified-source-row {
+    grid-template-columns: 1fr;
+  }
+  .verified-source-remove-spacer {
+    display: none;
+  }
+}
 .checkbox-row {
   display: flex !important;
   align-items: flex-start;

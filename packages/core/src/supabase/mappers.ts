@@ -10,6 +10,7 @@ import type {
   VerificationApplication,
   VerificationStatus,
 } from "../types";
+import { parseVerifiedSources } from "../verified-sources";
 
 const PERSONAL_BLURB =
   "Personal Use — private / non-commercial use by the buyer. No resale, sublicensing, or commercial product use.";
@@ -83,6 +84,7 @@ export type VerificationRow = {
   identity: string;
   industries: string[] | null;
   portfolio_links: string[] | null;
+  sources?: unknown;
   credentials: string | null;
   attestation_accepted_at: string | null;
   submitted_at: string | null;
@@ -177,6 +179,7 @@ export function mapVerification(row: VerificationRow): VerificationApplication {
     identity: row.identity,
     industries: row.industries ?? [],
     portfolioLinks: row.portfolio_links ?? [],
+    sources: parseVerifiedSources(row.sources),
     credentials: row.credentials,
     attestationAcceptedAt: row.attestation_accepted_at,
     submittedAt: row.submitted_at,

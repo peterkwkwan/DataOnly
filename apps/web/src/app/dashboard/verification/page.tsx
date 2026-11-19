@@ -8,8 +8,16 @@ import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Creator, VerificationApplication } from "@dataonly/core";
-import { EXTRA_INDUSTRIES, mapVerification, type VerificationRow } from "@dataonly/core";
+import type { Creator, VerificationApplication, VerifiedSource, VerifiedSourcePlatform } from "@dataonly/core";
+import {
+  EXTRA_INDUSTRIES,
+  emptyVerifiedSourceRow,
+  mapVerification,
+  validateVerifiedSources,
+  verifiedSourcePlatformLabel,
+  VERIFIED_SOURCE_PLATFORMS,
+  type VerificationRow,
+} from "@dataonly/core";
 
 const INDUSTRY_OPTIONS = [...EXTRA_INDUSTRIES];
 
@@ -19,7 +27,7 @@ export default function VerificationApplyPage() {
   const [application, setApplication] = useState<VerificationApplication | null>(null);
   const [identity, setIdentity] = useState("");
   const [industries, setIndustries] = useState<string[]>([]);
-  const [portfolio, setPortfolio] = useState("");
+  const [sources, setSources] = useState<VerifiedSource[]>([emptyVerifiedSourceRow()]);
   const [credentials, setCredentials] = useState("");
   const [attested, setAttested] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +35,13 @@ export default function VerificationApplyPage() {
   const [busy, setBusy] = useState(false);
   const [industriesOpen, setIndustriesOpen] = useState(false);
   const [activeOption, setActiveOption] = useState(0);
+  const [platformMenuIndex, setPlatformMenuIndex] = useState<number | null>(null);
+  const [platformActiveOption, setPlatformActiveOption] = useState(0);
   const industriesFieldId = useId();
+  const sourcesFieldId = useId();
   const listboxId = `${industriesFieldId}-listbox`;
   const industriesRef = useRef<HTMLDivElement>(null);
+  const sourcesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (loading || !user || !isSupabaseConfigured()) return;
@@ -53,7 +65,7 @@ export default function VerificationApplyPage() {
           setApplication(app);
           setIdentity(app.identity || ensured.name);
           setIndustries(app.industries);
-          setPortfolio(app.portfolioLinks.join("\n"));
+          setSources(app.sources.length > 0 ? app.sources : [emptyVerifiedSourceRow()]);
           setCredentials(app.credentials ?? "");
         }
       } catch (err) {
@@ -67,14 +79,20 @@ export default function VerificationApplyPage() {
   }, [loading, profile?.displayName, user]);
 
   useEffect(() => {
-    if (!industriesOpen) return;
+    if (!industriesOpen && platformMenuIndex === null) return;
     function onPointerDown(event: MouseEvent) {
-      if (!industriesRef.current?.contains(event.target as Node)) {
+      if (industriesOpen && !industriesRef.current?.contains(event.target as Node)) {
         setIndustriesOpen(false);
+      }
+      if (platformMenuIndex !== null && !sourcesRef.current?.contains(event.target as Node)) {
+        setPlatformMenuIndex(null);
       }
     }
     function onDocumentKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") setIndustriesOpen(false);
+      if (event.key === "Escape") {
+        setIndustriesOpen(false);
+        setPlatformMenuIndex(null);
+      }
     }
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onDocumentKeyDown);
@@ -82,7 +100,7 @@ export default function VerificationApplyPage() {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onDocumentKeyDown);
     };
-  }, [industriesOpen]);
+  }, [industriesOpen, platformMenuIndex]);
 
   function toggleIndustry(name: string) {
     setIndustries((current) =>
@@ -94,6 +112,21 @@ export default function VerificationApplyPage() {
     setIndustries((current) => current.filter((item) => item !== name));
   }
 
+  function updateSource(index: number, patch: Partial<VerifiedSource>) {
+    setSources((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function addSource() {
+    setSources((current) => [...current, emptyVerifiedSourceRow()]);
+  }
+
+  function removeSource(index: number) {
+    setSources((current) => {
+      if (current.length <= 1) return current;
+      return current.filter((_, i) => i !== index);
+    });
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!creator || !user) return;
@@ -101,21 +134,26 @@ export default function VerificationApplyPage() {
       setError("Attestation is required.");
       return;
     }
+    if (industries.length === 0) {
+      setError("Select at least one industry.");
+      return;
+    }
+    const sourcesResult = validateVerifiedSources(sources);
+    if (!sourcesResult.ok) {
+      setError(sourcesResult.error);
+      return;
+    }
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      const links = portfolio
-        .split(/\n|,/)
-        .map((s) => s.trim())
-        .filter(Boolean);
       const payload = {
         creator_id: creator.id,
         status: "submitted",
         identity: identity.trim(),
         industries,
-        portfolio_links: links,
+        sources: sourcesResult.sources,
         credentials: credentials.trim() || null,
         attestation_accepted_at: new Date().toISOString(),
         submitted_at: new Date().toISOString(),
@@ -129,7 +167,9 @@ export default function VerificationApplyPage() {
           .select("*")
           .single();
         if (updateError) throw updateError;
-        setApplication(mapVerification(data as VerificationRow));
+        const mapped = mapVerification(data as VerificationRow);
+        setApplication(mapped);
+        setSources(mapped.sources.length > 0 ? mapped.sources : [emptyVerifiedSourceRow()]);
       } else {
         const { data, error: insertError } = await supabase
           .from("verification_applications")
@@ -137,7 +177,9 @@ export default function VerificationApplyPage() {
           .select("*")
           .single();
         if (insertError) throw insertError;
-        setApplication(mapVerification(data as VerificationRow));
+        const mapped = mapVerification(data as VerificationRow);
+        setApplication(mapped);
+        setSources(mapped.sources.length > 0 ? mapped.sources : [emptyVerifiedSourceRow()]);
       }
       setMessage("Application submitted. An admin will review it.");
     } catch (err) {
@@ -199,6 +241,47 @@ export default function VerificationApplyPage() {
     }
   }
 
+  function onPlatformKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (locked) return;
+    const open = platformMenuIndex === index;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) {
+        setPlatformMenuIndex(index);
+        setPlatformActiveOption(0);
+        return;
+      }
+      setPlatformActiveOption((current) => {
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        return (current + delta + VERIFIED_SOURCE_PLATFORMS.length) % VERIFIED_SOURCE_PLATFORMS.length;
+      });
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (!open) {
+        setPlatformMenuIndex(index);
+        setPlatformActiveOption(
+          Math.max(
+            0,
+            VERIFIED_SOURCE_PLATFORMS.findIndex((p) => p.id === sources[index]?.platform),
+          ),
+        );
+        return;
+      }
+      const option = VERIFIED_SOURCE_PLATFORMS[platformActiveOption];
+      if (option) {
+        updateSource(index, { platform: option.id });
+        setPlatformMenuIndex(null);
+      }
+      return;
+    }
+    if (event.key === "Escape" && open) {
+      event.preventDefault();
+      setPlatformMenuIndex(null);
+    }
+  }
+
   const triggerLabel =
     industries.length === 0
       ? "Select industries"
@@ -245,6 +328,7 @@ export default function VerificationApplyPage() {
             disabled={locked}
             onClick={() => {
               if (locked) return;
+              setPlatformMenuIndex(null);
               setIndustriesOpen((open) => !open);
             }}
             onKeyDown={onIndustriesKeyDown}
@@ -304,16 +388,112 @@ export default function VerificationApplyPage() {
           ) : null}
         </div>
 
-        <label>
-          Portfolio / evidence links (one per line)
-          <textarea
-            required
-            rows={4}
-            value={portfolio}
-            onChange={(e) => setPortfolio(e.target.value)}
-            disabled={locked}
-          />
-        </label>
+        <div className="verified-sources-field" ref={sourcesRef}>
+          <span className="industry-field-label" id={sourcesFieldId}>
+            Verified sources
+          </span>
+          <p className="verified-sources-hint">
+            Add YouTube or LinkedIn links that show your expertise. Same platform can be used more than once.
+          </p>
+          <div className="verified-sources-rows" role="group" aria-labelledby={sourcesFieldId}>
+            {sources.map((row, index) => {
+              const menuOpen = platformMenuIndex === index;
+              const platformListId = `${sourcesFieldId}-platform-${index}`;
+              return (
+                <div key={index} className="verified-source-row">
+                  <div className="industry-field source-platform-field">
+                    <button
+                      type="button"
+                      className={`industry-select-trigger${menuOpen ? " is-open" : ""}`}
+                      aria-haspopup="listbox"
+                      aria-expanded={menuOpen}
+                      aria-controls={platformListId}
+                      aria-label={`Platform for source ${index + 1}`}
+                      disabled={locked}
+                      onClick={() => {
+                        if (locked) return;
+                        setIndustriesOpen(false);
+                        setPlatformMenuIndex((current) => (current === index ? null : index));
+                        setPlatformActiveOption(
+                          Math.max(
+                            0,
+                            VERIFIED_SOURCE_PLATFORMS.findIndex((p) => p.id === row.platform),
+                          ),
+                        );
+                      }}
+                      onKeyDown={(event) => onPlatformKeyDown(event, index)}
+                    >
+                      <span>{verifiedSourcePlatformLabel(row.platform)}</span>
+                      <Icon name="chevron" size={18} />
+                    </button>
+                    {menuOpen ? (
+                      <ul
+                        id={platformListId}
+                        className="industry-select-menu"
+                        role="listbox"
+                        aria-label="Source platform"
+                      >
+                        {VERIFIED_SOURCE_PLATFORMS.map((option, optionIndex) => {
+                          const selected = row.platform === option.id;
+                          const active = optionIndex === platformActiveOption;
+                          return (
+                            <li key={option.id} role="presentation">
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                className={`industry-select-option${selected ? " is-selected" : ""}${active ? " is-active" : ""}`}
+                                onMouseEnter={() => setPlatformActiveOption(optionIndex)}
+                                onClick={() => {
+                                  updateSource(index, { platform: option.id as VerifiedSourcePlatform });
+                                  setPlatformMenuIndex(null);
+                                }}
+                              >
+                                <span>{option.label}</span>
+                                {selected ? (
+                                  <span className="industry-select-check" aria-hidden="true">
+                                    ✓
+                                  </span>
+                                ) : null}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <input
+                    type="url"
+                    inputMode="url"
+                    placeholder="https://"
+                    aria-label={`URL for source ${index + 1}`}
+                    value={row.url}
+                    onChange={(e) => updateSource(index, { url: e.target.value })}
+                    disabled={locked}
+                  />
+                  {!locked && sources.length > 1 ? (
+                    <button
+                      type="button"
+                      className="text-button verified-source-remove"
+                      aria-label={`Remove source ${index + 1}`}
+                      onClick={() => removeSource(index)}
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <span className="verified-source-remove-spacer" aria-hidden="true" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {!locked ? (
+            <button type="button" className="text-button verified-sources-add" onClick={addSource}>
+              + Add source
+            </button>
+          ) : null}
+        </div>
+
         <label>
           Credentials (optional)
           <textarea

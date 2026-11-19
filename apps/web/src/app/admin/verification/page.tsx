@@ -6,7 +6,11 @@ import { useAuth } from "@/context/auth-context";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { VerificationApplication } from "@dataonly/core";
-import { mapVerification, type VerificationRow } from "@dataonly/core";
+import {
+  mapVerification,
+  verifiedSourcePlatformLabel,
+  type VerificationRow,
+} from "@dataonly/core";
 
 type QueueItem = VerificationApplication & { creatorName?: string };
 
@@ -155,15 +159,26 @@ export default function AdminVerificationPage() {
                   {app.status} · {app.identity}
                 </span>
                 <p>{app.industries.join(", ")}</p>
-                <ul>
-                  {app.portfolioLinks.map((link) => (
-                    <li key={link}>
-                      <a href={link} target="_blank" rel="noreferrer">
-                        {link}
+                <div className="admin-sources" aria-label="Verified sources">
+                  {app.sources.length > 0 ? (
+                    app.sources.map((source) => (
+                      <a
+                        key={`${source.platform}:${source.url}`}
+                        className="admin-source-chip"
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <span className="admin-source-label">
+                          {verifiedSourcePlatformLabel(source.platform)}
+                        </span>
+                        <span className="admin-source-url">{source.url}</span>
                       </a>
-                    </li>
-                  ))}
-                </ul>
+                    ))
+                  ) : (
+                    <p className="empty-hint">No verified sources on this application.</p>
+                  )}
+                </div>
                 {app.credentials ? <p>{app.credentials}</p> : null}
                 <label>
                   Note / reason

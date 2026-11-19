@@ -78,6 +78,7 @@ create table if not exists public.verification_applications (
   identity text not null default '',
   industries text[] not null default '{}',
   portfolio_links text[] not null default '{}',
+  sources jsonb not null default '[]'::jsonb,
   credentials text,
   attestation_accepted_at timestamptz,
   submitted_at timestamptz,

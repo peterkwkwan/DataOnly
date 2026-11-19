@@ -27,11 +27,17 @@ export default function CreatorsScreen() {
             kicker="EXPERT STOREFRONTS"
             title="Creators"
             action={
-              <IconButton onPress={() => undefined}>
-                <Glyph name="users" size={18} color={colors.ink} />
+              <IconButton onPress={() => router.push("/verification")}>
+                <Glyph name="shield" size={18} color={colors.ink} />
               </IconButton>
             }
           />
+          <Pressable style={styles.applyBanner} onPress={() => router.push("/verification")}>
+            <Text style={styles.applyTitle}>Apply for Verified</Text>
+            <Text style={styles.applyBody}>
+              Submit YouTube or LinkedIn sources for human review.
+            </Text>
+          </Pressable>
 
           {featured ? (
             <Pressable
@@ -102,6 +108,26 @@ function Stat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { paddingBottom: 28 },
+  applyBanner: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.welcome,
+    gap: 4,
+  },
+  applyTitle: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  applyBody: {
+    color: colors.muted,
+    fontSize: 11,
+    lineHeight: 16,
+  },
   featured: {
     marginHorizontal: 20,
     borderWidth: 1,

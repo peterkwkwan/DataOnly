@@ -1,8 +1,10 @@
-import { createSupabaseClient, hasSupabaseEnv, resolveSupabaseEnv } from "@dataonly/core";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { hasSupabaseEnv, resolveSupabaseEnv } from "@dataonly/core";
 
 /**
- * Expo Alpha stub: resolves EXPO_PUBLIC_SUPABASE_* when set.
- * Catalog still uses mock until a later pass wires live queries.
+ * Expo Alpha: resolves EXPO_PUBLIC_SUPABASE_* when set.
+ * Session persistence uses AsyncStorage so apply/submit works across reloads.
  */
 export function getMobileSupabaseEnv() {
   return resolveSupabaseEnv({
@@ -16,12 +18,23 @@ export function isMobileSupabaseConfigured() {
   return hasSupabaseEnv(getMobileSupabaseEnv() ?? undefined);
 }
 
+let client: SupabaseClient | null = null;
+
 export function createMobileSupabaseClient() {
+  if (client) return client;
   const env = getMobileSupabaseEnv();
   if (!env) {
     throw new Error(
       "Expo Supabase env missing. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
     );
   }
-  return createSupabaseClient(env);
+  client = createClient(env.url, env.anonKey, {
+    auth: {
+      storage: AsyncStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+    },
+  });
+  return client;
 }

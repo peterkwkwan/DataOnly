@@ -1,3 +1,7 @@
+import type { VerifiedSource } from "./verified-sources";
+
+export type { VerifiedSource, VerifiedSourcePlatform } from "./verified-sources";
+
 export type IndustryIconName =
   | "finance"
   | "healthcare"
@@ -94,7 +98,10 @@ export interface VerificationApplication {
   status: VerificationStatus;
   identity: string;
   industries: string[];
+  /** Legacy column; UI no longer writes this. Prefer `sources`. */
   portfolioLinks: string[];
+  /** Alpha verified evidence: YouTube / LinkedIn links. */
+  sources: VerifiedSource[];
   credentials: string | null;
   attestationAcceptedAt: string | null;
   submittedAt: string | null;
