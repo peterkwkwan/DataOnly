@@ -44,6 +44,9 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="header-actions">
+            <Link className="primary-button small" href={configured ? "/dashboard" : "/auth/sign-in"}>
+              Start selling <Icon name="arrow" size={16} />
+            </Link>
             <Link className="icon-button" href="/saved" aria-label="Saved">
               <Icon name="bookmark" size={19} />
               <span className="save-count">{savedIds.length}</span>
@@ -62,9 +65,6 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 Sign in
               </Link>
             )}
-            <Link className="primary-button small" href={configured ? "/dashboard" : "/auth/sign-in"}>
-              Start selling <Icon name="arrow" size={16} />
-            </Link>
             {user ? <AccountMenu /> : null}
             <button
               type="button"
