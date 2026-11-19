@@ -11,7 +11,7 @@ export default function SavedPage() {
   const cuts = catalog.getDatacuts().filter((cut) => savedIds.includes(cut.id));
 
   return (
-    <section className="saved-page page-view">
+    <section className="page-view">
       <div className="page-intro">
         <span className="kicker">Your library</span>
         <h1>Saved datacuts.</h1>
