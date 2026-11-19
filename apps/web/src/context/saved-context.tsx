@@ -24,6 +24,7 @@ type SavedContextValue = {
 
 const SavedContext = createContext<SavedContextValue | null>(null);
 const STORAGE_KEY = "dataonly:saved";
+const migratedKey = (userId: string) => `dataonly:saved-migrated:${userId}`;
 
 function readLocalSavedIds(): number[] | null {
   try {
@@ -37,8 +38,33 @@ function readLocalSavedIds(): number[] | null {
   }
 }
 
+/** Guest first-paint demo bookmarks — not real device saves to push into an empty cloud library. */
+function isDemoSeedOnly(ids: number[]): boolean {
+  const seed = new Set(catalog.getInitialSavedIds());
+  return ids.length > 0 && ids.every((id) => seed.has(id));
+}
+
+function hasMigratedLocalSaves(userId: string): boolean {
+  try {
+    return window.localStorage.getItem(migratedKey(userId)) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function markLocalSavesMigrated(userId: string) {
+  try {
+    window.localStorage.setItem(migratedKey(userId), "1");
+    // Drop device cache so an intentional empty cloud library cannot be re-seeded.
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function SavedProvider({ children }: { children: React.ReactNode }) {
   const { user, configured, loading: authLoading } = useAuth();
+  // Seed is first-paint only for guests; signed-in hydrate replaces it from cloud.
   const [savedIds, setSavedIds] = useState<number[]>(() => catalog.getInitialSavedIds());
   const [hydrated, setHydrated] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -64,41 +90,59 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
             const message = formatClientError(error, "Failed to load saved datacuts");
             console.warn("[saved]", message);
             setSyncError(message);
-            // Keep local/optimistic state; fall through to localStorage only as a last resort below.
-          } else {
-            const fromDb = (data ?? []).map((row) => Number(row.datacut_id)).filter((n) => Number.isFinite(n));
-            const local = readLocalSavedIds();
-
-            // First signed-in session with empty cloud library: push device saves up once.
-            if (fromDb.length === 0 && local && local.length > 0) {
-              const { error: upsertError } = await supabase.from("saved").upsert(
-                local.map((datacut_id) => ({ user_id: user.id, datacut_id })),
-                { onConflict: "user_id,datacut_id" },
-              );
-              if (cancelled) return;
-              if (upsertError) {
-                const message = formatClientError(upsertError, "Failed to sync local saves");
-                console.warn("[saved]", message);
-                setSyncError(message);
-                setSavedIds(local);
-              } else {
-                setSyncError(null);
-                setSavedIds(local);
-              }
-              setHydrated(true);
-              return;
-            }
-
-            setSyncError(null);
-            setSavedIds(fromDb);
+            // Keep optimistic/current state — do not fall through to seed/local re-inject.
             setHydrated(true);
             return;
           }
+
+          const fromDb = (data ?? [])
+            .map((row) => Number(row.datacut_id))
+            .filter((n) => Number.isFinite(n));
+          const local = readLocalSavedIds();
+          const alreadyMigrated = hasMigratedLocalSaves(user.id);
+          const shouldMigrateLocal =
+            fromDb.length === 0 &&
+            !alreadyMigrated &&
+            !!local &&
+            local.length > 0 &&
+            !isDemoSeedOnly(local);
+
+          // One-time only: first signed-in session with empty cloud + real device saves.
+          // Demo seed alone (e.g. Residential Energy id 2) must not re-seed after unsave.
+          // After migration (or any successful cloud read), empty cloud stays empty.
+          if (shouldMigrateLocal && local) {
+            const { error: upsertError } = await supabase.from("saved").upsert(
+              local.map((datacut_id) => ({ user_id: user.id, datacut_id })),
+              { onConflict: "user_id,datacut_id" },
+            );
+            if (cancelled) return;
+            if (upsertError) {
+              const message = formatClientError(upsertError, "Failed to sync local saves");
+              console.warn("[saved]", message);
+              setSyncError(message);
+              setSavedIds(local);
+              setHydrated(true);
+              return;
+            }
+            markLocalSavesMigrated(user.id);
+            setSyncError(null);
+            setSavedIds(local);
+            setHydrated(true);
+            return;
+          }
+
+          markLocalSavesMigrated(user.id);
+          setSyncError(null);
+          setSavedIds(fromDb);
+          setHydrated(true);
+          return;
         } catch (err) {
           if (cancelled) return;
           const message = formatClientError(err, "Failed to load saved datacuts");
           console.warn("[saved]", message);
           setSyncError(message);
+          setHydrated(true);
+          return;
         }
       }
 
@@ -121,6 +165,8 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
+    // Signed-in library lives in Supabase; do not keep a parallel device cache that
+    // can re-seed an intentional empty cloud library on the next hydrate.
     if (configured && user) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedIds));
   }, [savedIds, hydrated, configured, user]);
@@ -146,6 +192,8 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
               .eq("user_id", user.id)
               .eq("datacut_id", id);
             if (error) throw error;
+            // Ensure device cache cannot revive this row on the next empty-cloud hydrate.
+            markLocalSavesMigrated(user.id);
           } else {
             const { error } = await supabase
               .from("saved")
