@@ -33,11 +33,14 @@ export function formatClientError(err: unknown, fallback: string): string {
 function looksLikeMissingSchema(message: string, code?: string) {
   const lower = message.toLowerCase();
   if (code === "42P01" || code === "PGRST205" || code === "PGRST204") return true;
+  if (code === "23503") return true; // FK — often missing seed datacuts or profile row
+  if (code === "42501") return true; // missing GRANTs
   return (
     lower.includes("schema cache") ||
     lower.includes("could not find the table") ||
     lower.includes("does not exist") ||
     (lower.includes("relation") && lower.includes("exist")) ||
-    (lower.includes("foreign key") && lower.includes("profiles"))
+    lower.includes("foreign key") ||
+    lower.includes("permission denied")
   );
 }

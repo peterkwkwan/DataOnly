@@ -8,8 +8,10 @@ import { useSaved } from "@/context/saved-context";
 import { catalog } from "@/lib/catalog";
 
 export default function SavedPage() {
-  const { savedIds } = useSaved();
+  const { savedIds, syncError } = useSaved();
   const { user, configured } = useAuth();
+  // Client catalog is mock (ids 1–4); those match supabase/seed.sql. Live-only
+  // listing ids still count in savedIds but may not resolve to a card here.
   const cuts = catalog.getDatacuts().filter((cut) => savedIds.includes(cut.id));
   const statusLabel =
     configured && user ? "Synced to your account" : "Saved on this device";
@@ -21,6 +23,11 @@ export default function SavedPage() {
         <h1>Saved datacuts.</h1>
         <p>Keep the datacuts you care about in one place — ready when you are.</p>
       </div>
+      {syncError ? (
+        <p className="form-error" role="status" style={{ marginBottom: 16 }}>
+          {syncError}
+        </p>
+      ) : null}
       <div className="results-header">
         <div>
           <h2>{savedIds.length} saved</h2>
