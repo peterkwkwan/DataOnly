@@ -3,24 +3,28 @@
 import Link from "next/link";
 import { DatacutCard } from "@/components/datacut-card";
 import { Icon } from "@/components/icons";
+import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
 import { catalog } from "@/lib/catalog";
 
 export default function SavedPage() {
   const { savedIds } = useSaved();
+  const { user, configured } = useAuth();
   const cuts = catalog.getDatacuts().filter((cut) => savedIds.includes(cut.id));
+  const statusLabel =
+    configured && user ? "Synced to your account" : "Saved on this device";
 
   return (
     <section className="page-view">
       <div className="page-intro">
         <span className="kicker">Your library</span>
         <h1>Saved datacuts.</h1>
-        <p>Prototype wishlist — stored in this browser only.</p>
+        <p>Keep the datacuts you care about in one place — ready when you are.</p>
       </div>
       <div className="results-header">
         <div>
           <h2>{savedIds.length} saved</h2>
-          <span>Local mock state</span>
+          <span>{statusLabel}</span>
         </div>
         <Link className="link-button" href="/explore">
           Explore marketplace <Icon name="arrow" size={17} />
