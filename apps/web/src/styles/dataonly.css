@@ -3128,6 +3128,125 @@ footer button {
   border-radius: var(--radius-full);
   grid-template-columns: none !important;
 }
+.industry-field {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.industry-field-label {
+  font-size: 14px;
+  color: var(--muted);
+}
+.industry-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.industry-select-trigger:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.industry-select-trigger .is-placeholder {
+  color: var(--muted);
+}
+.industry-select-trigger svg {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.industry-select-trigger.is-open svg {
+  transform: rotate(180deg);
+}
+.industry-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  max-height: 280px;
+  overflow: auto;
+}
+.industry-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.industry-select-option:hover,
+.industry-select-option.is-active,
+.industry-select-option.is-selected {
+  background: var(--color-subtle);
+}
+.industry-select-check {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+}
+.industry-selected-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.industry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--color-subtle);
+  color: var(--ink);
+  font-size: 13px;
+}
+.industry-pill-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.industry-pill-remove:hover {
+  background: #fff;
+  color: var(--ink);
+}
 .checkbox-row {
   display: flex !important;
   align-items: flex-start;

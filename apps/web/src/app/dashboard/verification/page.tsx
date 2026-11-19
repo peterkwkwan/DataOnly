@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { Verified } from "@/components/brand";
+import { Icon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Creator, VerificationApplication } from "@dataonly/core";
 import { EXTRA_INDUSTRIES, mapVerification, type VerificationRow } from "@dataonly/core";
+
+const INDUSTRY_OPTIONS = [...EXTRA_INDUSTRIES];
 
 export default function VerificationApplyPage() {
   const { user, profile, loading } = useAuth();
@@ -22,6 +25,11 @@ export default function VerificationApplyPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [industriesOpen, setIndustriesOpen] = useState(false);
+  const [activeOption, setActiveOption] = useState(0);
+  const industriesFieldId = useId();
+  const listboxId = `${industriesFieldId}-listbox`;
+  const industriesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (loading || !user || !isSupabaseConfigured()) return;
@@ -58,10 +66,32 @@ export default function VerificationApplyPage() {
     };
   }, [loading, profile?.displayName, user]);
 
+  useEffect(() => {
+    if (!industriesOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!industriesRef.current?.contains(event.target as Node)) {
+        setIndustriesOpen(false);
+      }
+    }
+    function onDocumentKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") setIndustriesOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onDocumentKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onDocumentKeyDown);
+    };
+  }, [industriesOpen]);
+
   function toggleIndustry(name: string) {
     setIndustries((current) =>
       current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
     );
+  }
+
+  function removeIndustry(name: string) {
+    setIndustries((current) => current.filter((item) => item !== name));
   }
 
   async function onSubmit(event: FormEvent) {
@@ -133,7 +163,48 @@ export default function VerificationApplyPage() {
     );
   }
 
-  const locked = application?.status === "submitted" || application?.status === "under_review" || application?.status === "approved";
+  const locked =
+    application?.status === "submitted" ||
+    application?.status === "under_review" ||
+    application?.status === "approved";
+
+  function onIndustriesKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (locked) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!industriesOpen) {
+        setIndustriesOpen(true);
+        setActiveOption(0);
+        return;
+      }
+      setActiveOption((current) => {
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        return (current + delta + INDUSTRY_OPTIONS.length) % INDUSTRY_OPTIONS.length;
+      });
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (!industriesOpen) {
+        setIndustriesOpen(true);
+        return;
+      }
+      const name = INDUSTRY_OPTIONS[activeOption];
+      if (name) toggleIndustry(name);
+      return;
+    }
+    if (event.key === "Escape" && industriesOpen) {
+      event.preventDefault();
+      setIndustriesOpen(false);
+    }
+  }
+
+  const triggerLabel =
+    industries.length === 0
+      ? "Select industries"
+      : industries.length <= 2
+        ? industries.join(", ")
+        : `${industries.length} selected`;
 
   return (
     <section className="page-view">
@@ -159,19 +230,80 @@ export default function VerificationApplyPage() {
           Legal / display identity
           <input required value={identity} onChange={(e) => setIdentity(e.target.value)} disabled={locked} />
         </label>
-        <fieldset className="chip-fieldset" disabled={locked}>
-          <legend>Industries / expertise</legend>
-          {[...EXTRA_INDUSTRIES].map((name) => (
-            <label key={name} className="chip-option">
-              <input
-                type="checkbox"
-                checked={industries.includes(name)}
-                onChange={() => toggleIndustry(name)}
-              />
-              {name}
-            </label>
-          ))}
-        </fieldset>
+
+        <div className="industry-field" ref={industriesRef}>
+          <span className="industry-field-label" id={industriesFieldId}>
+            Industries / expertise
+          </span>
+          <button
+            type="button"
+            className={`industry-select-trigger${industriesOpen ? " is-open" : ""}`}
+            aria-haspopup="listbox"
+            aria-expanded={industriesOpen}
+            aria-controls={listboxId}
+            aria-labelledby={industriesFieldId}
+            disabled={locked}
+            onClick={() => {
+              if (locked) return;
+              setIndustriesOpen((open) => !open);
+            }}
+            onKeyDown={onIndustriesKeyDown}
+          >
+            <span className={industries.length === 0 ? "is-placeholder" : undefined}>{triggerLabel}</span>
+            <Icon name="chevron" size={18} />
+          </button>
+
+          {industriesOpen ? (
+            <ul
+              id={listboxId}
+              className="industry-select-menu"
+              role="listbox"
+              aria-labelledby={industriesFieldId}
+              aria-multiselectable="true"
+            >
+              {INDUSTRY_OPTIONS.map((name, index) => {
+                const selected = industries.includes(name);
+                const active = index === activeOption;
+                return (
+                  <li key={name} role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      className={`industry-select-option${selected ? " is-selected" : ""}${active ? " is-active" : ""}`}
+                      onMouseEnter={() => setActiveOption(index)}
+                      onClick={() => toggleIndustry(name)}
+                    >
+                      <span>{name}</span>
+                      {selected ? <span className="industry-select-check" aria-hidden="true">✓</span> : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+
+          {industries.length > 0 ? (
+            <div className="industry-selected-pills" aria-label="Selected industries">
+              {industries.map((name) => (
+                <span key={name} className="industry-pill">
+                  {name}
+                  {!locked ? (
+                    <button
+                      type="button"
+                      className="industry-pill-remove"
+                      aria-label={`Remove ${name}`}
+                      onClick={() => removeIndustry(name)}
+                    >
+                      <Icon name="close" size={12} />
+                    </button>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         <label>
           Portfolio / evidence links (one per line)
           <textarea
@@ -206,9 +338,6 @@ export default function VerificationApplyPage() {
           <button type="submit" className="primary-button" disabled={busy || locked || industries.length === 0}>
             {locked ? "Submitted" : busy ? "Submitting…" : "Submit application"}
           </button>
-          <Link className="text-button" href="/dashboard">
-            Back
-          </Link>
         </div>
       </form>
     </section>
