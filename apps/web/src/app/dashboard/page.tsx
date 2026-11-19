@@ -20,7 +20,7 @@ function verificationStatusLabel(
 }
 
 export default function DashboardPage() {
-  const { user, profile, loading, configured, isAdmin } = useAuth();
+  const { user, profile, loading, configured } = useAuth();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [listings, setListings] = useState<Datacut[]>([]);
   const [verification, setVerification] = useState<VerificationApplication | null>(null);
@@ -202,11 +202,6 @@ export default function DashboardPage() {
             <h2 id="dashboard-verification-heading">Verification</h2>
           </div>
           <div className="dashboard-section-actions">
-            {isAdmin ? (
-              <Link className="text-button" href="/admin/verification">
-                Admin queue
-              </Link>
-            ) : null}
             <Link className="primary-button small" href="/dashboard/verification">
               Apply for Verified
             </Link>
