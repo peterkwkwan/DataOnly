@@ -49,17 +49,14 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               <span className="save-count">{savedIds.length}</span>
             </Link>
             {user ? (
-              <>
-                <Link
-                  className={
-                    pathname.startsWith("/dashboard") ? "text-button active" : "text-button"
-                  }
-                  href="/dashboard"
-                >
-                  Dashboard
-                </Link>
-                <AccountMenu />
-              </>
+              <Link
+                className={
+                  pathname.startsWith("/dashboard") ? "text-button active" : "text-button"
+                }
+                href="/dashboard"
+              >
+                Dashboard
+              </Link>
             ) : (
               <Link className="text-button" href="/auth/sign-in">
                 Sign in
@@ -68,6 +65,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             <Link className="primary-button small" href={configured ? "/dashboard" : "/auth/sign-in"}>
               Start selling <Icon name="arrow" size={16} />
             </Link>
+            {user ? <AccountMenu /> : null}
             <button
               type="button"
               className="menu-button"
