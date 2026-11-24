@@ -11,13 +11,33 @@ import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabas
 import type { Creator, Datacut, VerificationApplication, VerificationStatus } from "@dataonly/core";
 import { mapDatacut, mapVerification, type DatacutRow, type VerificationRow } from "@dataonly/core";
 
+const VERIFICATION_PILL_LABELS: Record<VerificationStatus, string> = {
+  draft: "DRAFT",
+  submitted: "SUBMITTED",
+  under_review: "UNDER REVIEW",
+  needs_more_info: "ADDITIONAL INFO REQUESTED",
+  approved: "APPROVED",
+  rejected: "REJECTED",
+  revoked: "REVOKED",
+};
+
+const VIEW_APPLICATION_STATUSES = new Set<VerificationStatus>([
+  "submitted",
+  "under_review",
+  "needs_more_info",
+  "rejected",
+]);
+
 function verificationStatusPill(
   creator: Creator | null,
   application: VerificationApplication | null,
 ): { label: string; status: VerificationStatus | "not_applied" | "verified" } {
   if (creator?.verified) return { label: "VERIFIED", status: "verified" };
   if (application?.status) {
-    return { label: application.status.toUpperCase(), status: application.status };
+    return {
+      label: VERIFICATION_PILL_LABELS[application.status],
+      status: application.status,
+    };
   }
   return { label: "NOT APPLIED", status: "not_applied" };
 }
@@ -237,6 +257,12 @@ export default function DashboardPage() {
   }
 
   const verificationPill = verificationStatusPill(creator, verification);
+  const hideVerificationButton =
+    !!creator?.verified || verification?.status === "approved";
+  const verificationButtonLabel =
+    verification && VIEW_APPLICATION_STATUSES.has(verification.status)
+      ? "View application"
+      : "Apply for Verified";
 
   return (
     <section className="page-view dashboard-view">
@@ -310,10 +336,10 @@ export default function DashboardPage() {
           <div>
             <h2 id="dashboard-verification-heading">Verification</h2>
           </div>
-          {!creator?.verified ? (
+          {!hideVerificationButton ? (
             <div className="dashboard-section-actions">
               <Link className="primary-button small" href="/dashboard/verification">
-                Apply for Verified
+                {verificationButtonLabel}
               </Link>
             </div>
           ) : null}
@@ -321,12 +347,6 @@ export default function DashboardPage() {
         <p className="dashboard-verification-status">
           <b>Status:</b>
           <span className={statusPillClass(verificationPill.status)}>{verificationPill.label}</span>
-          {verification?.infoRequestNote ? (
-            <span>Info requested: {verification.infoRequestNote}</span>
-          ) : null}
-          {verification?.rejectionReason ? (
-            <span>Rejection: {verification.rejectionReason}</span>
-          ) : null}
         </p>
       </section>
 
