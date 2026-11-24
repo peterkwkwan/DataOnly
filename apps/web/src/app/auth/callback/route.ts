@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
+/** Handles magic-link and OAuth (e.g. Google) PKCE code → session exchange. */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");

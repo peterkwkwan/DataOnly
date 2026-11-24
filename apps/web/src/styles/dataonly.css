@@ -3160,6 +3160,31 @@ footer button {
   background: var(--paper);
   color: var(--ink);
 }
+.auth-card .oauth-button {
+  width: 100%;
+  gap: 10px;
+  padding: 13px 18px;
+}
+.auth-card .oauth-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
 .auth-tabs {
   display: flex;
   gap: 8px;

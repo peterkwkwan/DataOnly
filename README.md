@@ -82,16 +82,21 @@ grant select, insert, update, delete on public.saved to authenticated;
 
 grant select, insert, update, delete on public.verification_applications to authenticated;
 ```
-3. **Authentication → Providers** — enable Email (magic link and/or password).
+3. **Authentication → Providers** — enable Email (magic link and/or password). Optionally enable **Google** (paste Client ID + Client Secret from Google Cloud). No SMTP required for Google OAuth.
 4. **Authentication → URL configuration**
-   - Site URL: `http://localhost:3000`
-   - Redirect URLs: `http://localhost:3000/auth/callback`
-5. **Project Settings → API** — copy:
+   - Site URL: `http://localhost:3000` (or your production origin)
+   - Redirect URLs: `http://localhost:3000/auth/callback` and `https://YOUR_HOST/auth/callback`
+5. **Google Cloud Console** (for “Continue with Google” on `/auth/sign-in`)
+   - APIs & Services → Credentials → Create **OAuth client ID** (Web application)
+   - Authorized JavaScript origins: `http://localhost:3000`, `https://YOUR_HOST`
+   - Authorized redirect URIs: `https://YOUR_PROJECT.supabase.co/auth/v1/callback`
+   - Copy Client ID + Client Secret into Supabase → Authentication → Providers → Google
+6. **Project Settings → API** — copy:
    - Project URL
    - Publishable key (legacy UI label: `anon` `public`)
    - Service role key (server-only — needed for Stripe webhook entitlement writes)
    Do **not** put the `service_role` key in Next.js public env.
-6. Create `apps/web/.env.local` from `apps/web/.env.example`:
+7. Create `apps/web/.env.local` from `apps/web/.env.example`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
@@ -99,8 +104,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 ```
 
-7. Restart `npm run dev:web`. Public catalog pages read published rows from Supabase; if env is missing or queries fail, they fall back to mock.
-8. Sign in at `/auth/sign-in`, open `/dashboard` (creates your creator profile), then promote yourself for the admin queue:
+8. Restart `npm run dev:web`. Public catalog pages read published rows from Supabase; if env is missing or queries fail, they fall back to mock.
+9. Sign in at `/auth/sign-in` (Google, magic link, or email + password), open `/dashboard` (creates your creator profile), then promote yourself for the admin queue:
 
 ```sql
 update public.profiles
@@ -108,7 +113,7 @@ set role = 'admin'
 where email = 'you@example.com';
 ```
 
-9. Optional Expo stub (`apps/mobile/.env`):
+10. Optional Expo stub (`apps/mobile/.env`):
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
