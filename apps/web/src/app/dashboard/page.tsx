@@ -72,7 +72,7 @@ export default function DashboardPage() {
         method: sync ? "POST" : "GET",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to load Connect status");
+      if (!res.ok) throw new Error(data.error ?? "Failed to load payout status");
       setConnect({
         configured: !!data.configured,
         accountId: data.accountId ?? null,
@@ -81,7 +81,7 @@ export default function DashboardPage() {
         onboardingComplete: !!data.onboardingComplete,
       });
     } catch (err) {
-      setConnectMsg(formatClientError(err, "Could not load Stripe Connect status"));
+      setConnectMsg(formatClientError(err, "Could not load payout status"));
     }
   }
 
@@ -98,17 +98,17 @@ export default function DashboardPage() {
       };
       if (!res.ok) {
         setConnectMsg(
-          [data.error, data.setupHint].filter(Boolean).join(" ") || "Connect onboarding failed",
+          [data.error, data.setupHint].filter(Boolean).join(" ") || "Could not start payout setup",
         );
         return;
       }
       if (!data.url) {
-        setConnectMsg("Stripe did not return an onboarding link");
+        setConnectMsg("Could not open payout setup. Try again.");
         return;
       }
       window.location.href = data.url;
     } catch (err) {
-      setConnectMsg(formatClientError(err, "Connect onboarding failed"));
+      setConnectMsg(formatClientError(err, "Could not start payout setup"));
     } finally {
       setConnectBusy(false);
     }
@@ -170,9 +170,9 @@ export default function DashboardPage() {
         const connectParam = params.get("connect");
         await refreshConnectStatus(connectParam === "return" || connectParam === "refresh");
         if (!cancelled && connectParam === "return") {
-          setConnectMsg("Returned from Stripe. Payout status refreshed.");
+          setConnectMsg("Payout settings updated.");
         } else if (!cancelled && connectParam === "refresh") {
-          setConnectMsg("Onboarding link expired or was refreshed — start Connect again if needed.");
+          setConnectMsg("Your payout link expired. Try setting up again.");
         }
       } catch (err) {
         if (!cancelled) {
@@ -353,7 +353,7 @@ export default function DashboardPage() {
       <section className="dashboard-verification-card" aria-labelledby="dashboard-payouts-heading">
         <div className="results-header dashboard-section-toolbar">
           <div>
-            <h2 id="dashboard-payouts-heading">Payouts (Stripe Connect)</h2>
+            <h2 id="dashboard-payouts-heading">Payouts</h2>
           </div>
           <div className="dashboard-section-actions">
             <button
@@ -363,12 +363,10 @@ export default function DashboardPage() {
               onClick={() => void startConnectOnboarding()}
             >
               {connectBusy
-                ? "Opening Stripe…"
+                ? "Opening…"
                 : connect?.onboardingComplete
-                  ? "Update Connect account"
-                  : connect?.accountId
-                    ? "Continue Connect onboarding"
-                    : "Set up payouts"}
+                  ? "Update payout settings"
+                  : "Set up payouts"}
             </button>
           </div>
         </div>
@@ -377,23 +375,14 @@ export default function DashboardPage() {
           {!connect
             ? "…"
             : !connect.configured
-              ? "Stripe keys not configured on the server (see README)"
+              ? "Payouts aren't available right now"
               : connect.onboardingComplete
-                ? "Ready to receive destination charges"
-                : connect.accountId
-                  ? "Express account created — finish onboarding in Stripe"
-                  : "Not started"}
-          {connect?.accountId ? (
-            <span>
-              {" "}
-              · account <code>{connect.accountId}</code>
-            </span>
-          ) : null}
+                ? "Payouts active — you can receive sales"
+                : "Finish setup to receive payouts"}
         </p>
         {connectMsg ? <p className="empty-hint">{connectMsg}</p> : null}
         <p className="empty-hint">
-          Buyers can only check out once your Express account has <code>charges_enabled</code>.
-          Platform fee defaults to 10% (<code>STRIPE_PLATFORM_FEE_PERCENT</code>).
+          Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee.
         </p>
       </section>
     </section>
