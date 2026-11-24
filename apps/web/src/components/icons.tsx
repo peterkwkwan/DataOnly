@@ -5,18 +5,22 @@ import type { IndustryIconName } from "@dataonly/core";
 export type IconName =
   | "arrow"
   | "bookmark"
+  | "chart"
   | "chevron"
   | "close"
   | "database"
+  | "edit"
   | "home"
   | "layers"
   | "logout"
   | "menu"
+  | "more"
   | "search"
   | "shield"
   | "spark"
   | "star"
   | "store"
+  | "trash"
   | "users";
 
 export function Icon({
@@ -35,6 +39,12 @@ export function Icon({
       </>
     ),
     bookmark: <path d="M6 4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V21l-6-3.8L6 21V4.8Z" />,
+    chart: (
+      <>
+        <path d="M4 19V5M4 19h16" />
+        <path d="M8 16v-4M12 16V8M16 16v-7" />
+      </>
+    ),
     chevron: <path d="m8 10 4 4 4-4" />,
     close: (
       <>
@@ -45,6 +55,12 @@ export function Icon({
       <>
         <ellipse cx="12" cy="5" rx="8" ry="3" />
         <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+        <path d="m13 7 4 4" />
       </>
     ),
     home: (
@@ -70,6 +86,13 @@ export function Icon({
         <path d="M4 7h16M4 12h16M4 17h16" />
       </>
     ),
+    more: (
+      <>
+        <circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none" />
+      </>
+    ),
     search: (
       <>
         <circle cx="11" cy="11" r="7" />
@@ -91,6 +114,11 @@ export function Icon({
         <path d="M4 9h16l-1.4-5H5.4L4 9Z" />
         <path d="M5 9v11h14V9M9 20v-6h6v6" />
         <path d="M4 9c0 1.7 2.7 2.7 4 1 1.3 1.7 3.7 1.7 5 0 1.3 1.7 4 1.7 5.3 0" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M4 7h16M9 7V5h6v2M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
       </>
     ),
     users: (

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Verified } from "@/components/brand";
+import { ListingRowMenu } from "@/components/listing-row-menu";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
@@ -217,15 +218,12 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="listing-row-actions">
-                <Link href={`/dashboard/listings/${cut.id}`}>Edit</Link>
-                <button
-                  type="button"
-                  className="text-button"
-                  disabled={deletingId === cut.id}
-                  onClick={() => void handleDeleteListing(cut)}
-                >
-                  {deletingId === cut.id ? "Deleting…" : "Delete"}
-                </button>
+                <ListingRowMenu
+                  editHref={`/dashboard/listings/${cut.id}`}
+                  listingTitle={cut.title}
+                  deleting={deletingId === cut.id}
+                  onDelete={() => void handleDeleteListing(cut)}
+                />
               </div>
             </article>
           ))
