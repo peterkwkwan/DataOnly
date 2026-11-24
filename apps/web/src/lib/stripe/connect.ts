@@ -14,12 +14,15 @@ export function getConnectDefaultCountry(): string {
 }
 
 /**
- * Maps Accounts v2 recipient capability + requirements into the existing
+ * Maps Accounts v2 capabilities + requirements into the existing
  * creators.stripe_* boolean columns (checkout still gates on chargesEnabled).
+ * Destination charges need stripe_transfers; Stripe also requires merchant
+ * card_payments when requesting transfers on this platform.
  */
 export function flagsFromV2Account(account: Stripe.V2.Core.Account): ConnectAccountFlags {
   const transfersStatus =
     account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status;
+  // Destination Checkout needs transfers; card_payments is requested at create but not the gate.
   const chargesEnabled = transfersStatus === "active";
 
   const entries = account.requirements?.entries ?? [];
@@ -34,7 +37,7 @@ export function flagsFromV2Account(account: Stripe.V2.Core.Account): ConnectAcco
   return { chargesEnabled, detailsSubmitted, onboardingComplete };
 }
 
-/** Create a marketplace recipient account (destination charges + Express Dashboard). */
+/** Create a marketplace account (destination charges + Express Dashboard). */
 export async function createConnectAccountV2(params: {
   email?: string | null;
   displayName: string;
@@ -59,6 +62,13 @@ export async function createConnectAccountV2(params: {
       country: getConnectDefaultCountry(),
     },
     configuration: {
+      // Stripe requires card_payments when requesting stripe_transfers (req_v2vfnEnJCuIzuq6jh).
+      // Checkout remains destination charges on the platform (no on_behalf_of).
+      merchant: {
+        capabilities: {
+          card_payments: { requested: true },
+        },
+      },
       recipient: {
         capabilities: {
           stripe_balance: {
@@ -68,7 +78,13 @@ export async function createConnectAccountV2(params: {
       },
     },
     metadata: params.metadata,
-    include: ["configuration.recipient", "identity", "requirements", "defaults"],
+    include: [
+      "configuration.merchant",
+      "configuration.recipient",
+      "identity",
+      "requirements",
+      "defaults",
+    ],
   });
 
   return { accountId: account.id, flags: flagsFromV2Account(account) };
@@ -103,7 +119,12 @@ export async function retrieveConnectFlagsV2(
 ): Promise<ConnectAccountFlags> {
   const stripe = getStripe();
   const account = await stripe.v2.core.accounts.retrieve(accountId, {
-    include: ["configuration.recipient", "requirements", "identity"],
+    include: [
+      "configuration.merchant",
+      "configuration.recipient",
+      "requirements",
+      "identity",
+    ],
   });
   return flagsFromV2Account(account);
 }
