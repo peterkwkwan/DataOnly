@@ -42,11 +42,23 @@ export function BuyModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ datacutId: cut.id }),
       });
-      const data = (await res.json()) as {
-        url?: string;
-        error?: string;
-        code?: string;
-      };
+      const raw = await res.text();
+      let data: { url?: string; error?: string; code?: string } = {};
+      if (raw.trim()) {
+        try {
+          data = JSON.parse(raw) as typeof data;
+        } catch {
+          setError(
+            res.ok
+              ? "Checkout returned an invalid response"
+              : `Checkout failed (${res.status})`,
+          );
+          return;
+        }
+      } else if (!res.ok) {
+        setError(`Checkout failed (${res.status})`);
+        return;
+      }
       if (!res.ok) {
         if (data.code === "stripe_not_configured") {
           setError(
@@ -57,7 +69,7 @@ export function BuyModal({
         } else if (data.code === "already_entitled") {
           setError("You already own this datacut.");
         } else {
-          setError(data.error ?? "Checkout failed");
+          setError(data.error ?? `Checkout failed (${res.status})`);
         }
         return;
       }
