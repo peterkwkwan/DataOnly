@@ -3272,6 +3272,12 @@ footer button {
   display: grid;
   gap: 6px;
 }
+.listing-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
 .listing-row span,
 .listing-row p {
   color: var(--muted);

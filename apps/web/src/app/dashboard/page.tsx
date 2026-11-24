@@ -26,6 +26,23 @@ export default function DashboardPage() {
   const [verification, setVerification] = useState<VerificationApplication | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  async function handleDeleteListing(cut: Datacut) {
+    if (!window.confirm(`Delete “${cut.title}”? This cannot be undone.`)) return;
+    setDeletingId(cut.id);
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: deleteError } = await supabase.from("datacuts").delete().eq("id", cut.id);
+      if (deleteError) throw deleteError;
+      setListings((prev) => prev.filter((item) => item.id !== cut.id));
+    } catch (err) {
+      setError(formatClientError(err, "Failed to delete listing"));
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     if (loading) return;
@@ -196,7 +213,17 @@ export default function DashboardPage() {
                   {cut.license} · ${cut.price}
                 </span>
               </div>
-              <Link href={`/dashboard/listings/${cut.id}`}>Edit</Link>
+              <div className="listing-row-actions">
+                <Link href={`/dashboard/listings/${cut.id}`}>Edit</Link>
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={deletingId === cut.id}
+                  onClick={() => void handleDeleteListing(cut)}
+                >
+                  {deletingId === cut.id ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             </article>
           ))
         )}
