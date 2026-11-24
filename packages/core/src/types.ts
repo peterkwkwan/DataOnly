@@ -51,6 +51,30 @@ export interface Creator {
   userId?: string | null;
   verifiedAt?: string | null;
   revokedAt?: string | null;
+  /** Stripe Connect Express account id (Beta) */
+  stripeAccountId?: string | null;
+  stripeChargesEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
+  stripeOnboardingComplete?: boolean;
+}
+
+export type EntitlementStatus = "pending" | "active" | "refunded" | "revoked";
+
+export interface Entitlement {
+  id: string;
+  userId: string;
+  datacutId: number;
+  license: LicenseTemplate;
+  licenseVersion: string;
+  amountCents: number;
+  currency: string;
+  platformFeeCents: number;
+  stripeCheckoutSessionId: string | null;
+  stripePaymentIntentId: string | null;
+  stripeAccountId: string | null;
+  status: EntitlementStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Datacut {

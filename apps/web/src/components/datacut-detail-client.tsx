@@ -2,11 +2,23 @@
 
 import type { Datacut } from "@dataonly/core";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Art } from "@/components/brand";
 import { BuyModal } from "@/components/buy-modal";
 import { Icon } from "@/components/icons";
+import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
+
+type AccessPayload = {
+  access: string;
+  delivery: { mode: string; note: string; format: string; size: string; records: string };
+  license: {
+    template: string;
+    version: string;
+    summary: { title: string; allows: string; forbids: string };
+  };
+};
 
 export function DatacutDetailClient({
   cut,
@@ -18,9 +30,68 @@ export function DatacutDetailClient({
   creatorVerified: boolean;
 }) {
   const { isSaved, toggleSaved } = useSaved();
+  const { user, configured, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
   const [buyOpen, setBuyOpen] = useState(false);
+  const [entitled, setEntitled] = useState(false);
+  const [entitlementLoading, setEntitlementLoading] = useState(false);
+  const [access, setAccess] = useState<AccessPayload | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
   const saved = isSaved(cut.id);
   const verified = creatorVerified || !!cut.creatorVerified;
+
+  const refreshEntitlement = useCallback(async () => {
+    if (!configured || !user) {
+      setEntitled(false);
+      return;
+    }
+    setEntitlementLoading(true);
+    try {
+      const res = await fetch(`/api/entitlements/check?datacutId=${cut.id}`);
+      const data = (await res.json()) as { entitled?: boolean };
+      setEntitled(!!data.entitled);
+    } catch {
+      setEntitled(false);
+    } finally {
+      setEntitlementLoading(false);
+    }
+  }, [configured, cut.id, user]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    void refreshEntitlement();
+  }, [authLoading, refreshEntitlement]);
+
+  useEffect(() => {
+    const checkout = searchParams.get("checkout");
+    if (checkout === "success") {
+      setBanner("Payment received. Entitlement activates when the Stripe webhook lands (usually seconds).");
+      void refreshEntitlement();
+    } else if (checkout === "cancel") {
+      setBanner("Checkout canceled — no charge was made.");
+    }
+  }, [refreshEntitlement, searchParams]);
+
+  async function openAccess() {
+    setAccessError(null);
+    setAccessBusy(true);
+    try {
+      const res = await fetch(`/api/entitlements/access?datacutId=${cut.id}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setAccessError(data.error ?? "Access denied");
+        setAccess(null);
+        return;
+      }
+      setAccess(data as AccessPayload);
+    } catch (err) {
+      setAccessError(err instanceof Error ? err.message : "Access failed");
+    } finally {
+      setAccessBusy(false);
+    }
+  }
 
   return (
     <div className="detail-layout">
@@ -51,10 +122,29 @@ export function DatacutDetailClient({
         </div>
         <div className="buy-license">{cut.licenseBlurb}</div>
         <div className="detail-price">${cut.price} USD</div>
+
+        {banner ? <p className="empty-hint">{banner}</p> : null}
+
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" className="primary-button" onClick={() => setBuyOpen(true)}>
-            Buy datacut <Icon name="arrow" size={16} />
-          </button>
+          {entitled ? (
+            <button
+              type="button"
+              className="primary-button"
+              disabled={accessBusy}
+              onClick={() => void openAccess()}
+            >
+              {accessBusy ? "Opening…" : "Open access"} <Icon name="arrow" size={16} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="primary-button"
+              disabled={entitlementLoading}
+              onClick={() => setBuyOpen(true)}
+            >
+              Buy datacut <Icon name="arrow" size={16} />
+            </button>
+          )}
           <button
             type="button"
             className={`icon-button ${saved ? "saved" : ""}`}
@@ -73,8 +163,25 @@ export function DatacutDetailClient({
             {saved ? "Saved" : "Save"}
           </button>
         </div>
+
+        {accessError ? <p className="form-error">{accessError}</p> : null}
+        {access ? (
+          <div className="buy-license" style={{ marginTop: 16 }}>
+            <b>Access granted · {access.license.summary.title}</b>
+            <p style={{ margin: "8px 0 0" }}>{access.delivery.note}</p>
+            <p style={{ margin: "6px 0 0" }}>
+              Format {access.delivery.format} · {access.delivery.size} · {access.delivery.records}{" "}
+              records · license {access.license.version}
+            </p>
+          </div>
+        ) : null}
       </div>
-      <BuyModal cut={cut} open={buyOpen} onClose={() => setBuyOpen(false)} />
+      <BuyModal
+        cut={cut}
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        entitled={entitled}
+      />
     </div>
   );
 }

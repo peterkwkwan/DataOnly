@@ -36,6 +36,63 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [connectBusy, setConnectBusy] = useState(false);
+  const [connectMsg, setConnectMsg] = useState<string | null>(null);
+  const [connect, setConnect] = useState<{
+    configured: boolean;
+    accountId: string | null;
+    chargesEnabled: boolean;
+    detailsSubmitted: boolean;
+    onboardingComplete: boolean;
+  } | null>(null);
+
+  async function refreshConnectStatus(sync = false) {
+    try {
+      const res = await fetch("/api/stripe/connect/status", {
+        method: sync ? "POST" : "GET",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load Connect status");
+      setConnect({
+        configured: !!data.configured,
+        accountId: data.accountId ?? null,
+        chargesEnabled: !!data.chargesEnabled,
+        detailsSubmitted: !!data.detailsSubmitted,
+        onboardingComplete: !!data.onboardingComplete,
+      });
+    } catch (err) {
+      setConnectMsg(formatClientError(err, "Could not load Stripe Connect status"));
+    }
+  }
+
+  async function startConnectOnboarding() {
+    setConnectBusy(true);
+    setConnectMsg(null);
+    try {
+      const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
+      const data = (await res.json()) as {
+        url?: string;
+        error?: string;
+        code?: string;
+        setupHint?: string;
+      };
+      if (!res.ok) {
+        setConnectMsg(
+          [data.error, data.setupHint].filter(Boolean).join(" ") || "Connect onboarding failed",
+        );
+        return;
+      }
+      if (!data.url) {
+        setConnectMsg("Stripe did not return an onboarding link");
+        return;
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      setConnectMsg(formatClientError(err, "Connect onboarding failed"));
+    } finally {
+      setConnectBusy(false);
+    }
+  }
 
   async function handleDeleteListing(cut: Datacut) {
     if (!window.confirm(`Delete “${cut.title}”? This cannot be undone.`)) return;
@@ -88,6 +145,14 @@ export default function DashboardPage() {
           setVerification(
             verificationData ? mapVerification(verificationData as VerificationRow) : null,
           );
+        }
+        const params = new URLSearchParams(window.location.search);
+        const connectParam = params.get("connect");
+        await refreshConnectStatus(connectParam === "return" || connectParam === "refresh");
+        if (!cancelled && connectParam === "return") {
+          setConnectMsg("Returned from Stripe. Payout status refreshed.");
+        } else if (!cancelled && connectParam === "refresh") {
+          setConnectMsg("Onboarding link expired or was refreshed — start Connect again if needed.");
         }
       } catch (err) {
         if (!cancelled) {
@@ -262,6 +327,53 @@ export default function DashboardPage() {
           {verification?.rejectionReason ? (
             <span>Rejection: {verification.rejectionReason}</span>
           ) : null}
+        </p>
+      </section>
+
+      <section className="dashboard-verification-card" aria-labelledby="dashboard-payouts-heading">
+        <div className="results-header dashboard-section-toolbar">
+          <div>
+            <h2 id="dashboard-payouts-heading">Payouts (Stripe Connect)</h2>
+          </div>
+          <div className="dashboard-section-actions">
+            <button
+              type="button"
+              className="primary-button small"
+              disabled={connectBusy}
+              onClick={() => void startConnectOnboarding()}
+            >
+              {connectBusy
+                ? "Opening Stripe…"
+                : connect?.onboardingComplete
+                  ? "Update Connect account"
+                  : connect?.accountId
+                    ? "Continue Connect onboarding"
+                    : "Set up payouts"}
+            </button>
+          </div>
+        </div>
+        <p className="dashboard-verification-status">
+          <b>Status:</b>{" "}
+          {!connect
+            ? "…"
+            : !connect.configured
+              ? "Stripe keys not configured on the server (see README)"
+              : connect.onboardingComplete
+                ? "Ready to receive destination charges"
+                : connect.accountId
+                  ? "Express account created — finish onboarding in Stripe"
+                  : "Not started"}
+          {connect?.accountId ? (
+            <span>
+              {" "}
+              · account <code>{connect.accountId}</code>
+            </span>
+          ) : null}
+        </p>
+        {connectMsg ? <p className="empty-hint">{connectMsg}</p> : null}
+        <p className="empty-hint">
+          Buyers can only check out once your Express account has <code>charges_enabled</code>.
+          Platform fee defaults to 10% (<code>STRIPE_PLATFORM_FEE_PERCENT</code>).
         </p>
       </section>
     </section>

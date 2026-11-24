@@ -4,6 +4,8 @@ export type {
   Creator,
   Datacut,
   DatacutWriteInput,
+  Entitlement,
+  EntitlementStatus,
   IndustryIconName,
   LicenseTemplate,
   ListingStatus,
@@ -15,6 +17,11 @@ export type {
   VerifiedSource,
   VerifiedSourcePlatform,
 } from "./types";
+export {
+  LICENSE_SUMMARIES,
+  LICENSE_TEMPLATE_VERSION,
+  licenseVersionLabel,
+} from "./licensing";
 export {
   categories,
   creators,
@@ -36,6 +43,7 @@ export {
   mapCategory,
   mapCreator,
   mapDatacut,
+  mapEntitlement,
   mapProfile,
   mapVerification,
 } from "./supabase/mappers";
@@ -43,6 +51,7 @@ export type {
   CategoryRow,
   CreatorRow,
   DatacutRow,
+  EntitlementRow,
   ProfileRow,
   VerificationRow,
 } from "./supabase/mappers";

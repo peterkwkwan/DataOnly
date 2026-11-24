@@ -2,6 +2,8 @@ import type {
   Category,
   Creator,
   Datacut,
+  Entitlement,
+  EntitlementStatus,
   IndustryIconName,
   LicenseTemplate,
   ListingStatus,
@@ -45,6 +47,27 @@ export type CreatorRow = {
   bio: string;
   verified_at: string | null;
   revoked_at: string | null;
+  stripe_account_id?: string | null;
+  stripe_charges_enabled?: boolean | null;
+  stripe_details_submitted?: boolean | null;
+  stripe_onboarding_complete?: boolean | null;
+};
+
+export type EntitlementRow = {
+  id: string;
+  user_id: string;
+  datacut_id: number;
+  license: string;
+  license_version: string;
+  amount_cents: number;
+  currency: string;
+  platform_fee_cents: number;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_account_id: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type DatacutRow = {
@@ -149,6 +172,30 @@ export function mapCreator(row: CreatorRow): Creator {
     bio: row.bio,
     verifiedAt: row.verified_at,
     revokedAt: row.revoked_at,
+    stripeAccountId: row.stripe_account_id ?? null,
+    stripeChargesEnabled: !!row.stripe_charges_enabled,
+    stripeDetailsSubmitted: !!row.stripe_details_submitted,
+    stripeOnboardingComplete: !!row.stripe_onboarding_complete,
+  };
+}
+
+export function mapEntitlement(row: EntitlementRow): Entitlement {
+  const license = (row.license === "commercial" ? "commercial" : "personal") as LicenseTemplate;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    datacutId: Number(row.datacut_id),
+    license,
+    licenseVersion: row.license_version,
+    amountCents: Number(row.amount_cents),
+    currency: row.currency,
+    platformFeeCents: Number(row.platform_fee_cents),
+    stripeCheckoutSessionId: row.stripe_checkout_session_id,
+    stripePaymentIntentId: row.stripe_payment_intent_id,
+    stripeAccountId: row.stripe_account_id,
+    status: (row.status as EntitlementStatus) || "active",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

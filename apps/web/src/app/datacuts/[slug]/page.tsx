@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { DatacutDetailClient } from "@/components/datacut-detail-client";
 import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
 
@@ -32,7 +33,13 @@ export default async function DatacutDetailPage({ params }: Props) {
 
   return (
     <>
-      <DatacutDetailClient cut={cut} creatorSlug={creator?.slug} creatorVerified={!!creator?.verified} />
+      <Suspense fallback={<p className="empty-hint">Loading datacut…</p>}>
+        <DatacutDetailClient
+          cut={cut}
+          creatorSlug={creator?.slug}
+          creatorVerified={!!creator?.verified}
+        />
+      </Suspense>
       <p className="empty-hint" style={{ padding: "0 5vw 60px" }}>
         <Link href={category ? `/explore/${category.slug}` : "/explore"}>
           ← Back to {cut.categoryName}
