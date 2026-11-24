@@ -234,7 +234,7 @@ export default function VerificationApplyScreen() {
             {application ? (
               <View style={styles.banner}>
                 <Text style={styles.bannerText}>
-                  Status: <Text style={styles.bold}>{application.status}</Text>
+                  Status: <Text style={styles.bold}>{application.status.toUpperCase()}</Text>
                 </Text>
                 {application.infoRequestNote ? (
                   <Text style={styles.bannerText}>Info requested: {application.infoRequestNote}</Text>

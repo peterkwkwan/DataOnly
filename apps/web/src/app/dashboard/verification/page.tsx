@@ -301,7 +301,7 @@ export default function VerificationApplyPage() {
 
       {application ? (
         <div className="status-banner">
-          <b>Status:</b> {application.status}
+          <b>Status:</b> {application.status.toUpperCase()}
           {application.infoRequestNote ? <p>Info requested: {application.infoRequestNote}</p> : null}
           {application.rejectionReason ? <p>Rejection: {application.rejectionReason}</p> : null}
         </div>

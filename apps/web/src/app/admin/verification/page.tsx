@@ -186,7 +186,7 @@ export default function AdminVerificationPage() {
                 <div className="admin-queue-identity">
                   <div className="admin-queue-name-row">
                     <b className="admin-queue-name">{app.creatorName ?? app.identity ?? app.creatorId}</b>
-                    <span className={statusPillClass(app.status)}>{app.status}</span>
+                    <span className={statusPillClass(app.status)}>{app.status.toUpperCase()}</span>
                   </div>
                   {app.industries.length > 0 ? (
                     <p className="admin-queue-meta">{app.industries.join(" · ")}</p>
