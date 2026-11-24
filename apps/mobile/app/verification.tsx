@@ -140,6 +140,8 @@ export default function VerificationApplyScreen() {
     setMessage(null);
     try {
       const supabase = createMobileSupabaseClient();
+      // New application after reject; continue same row for draft / info-request.
+      // Always clear prior review fields so SUBMITTED never surfaces stale notes.
       const payload = {
         creator_id: creator.id,
         status: "submitted",
@@ -150,8 +152,15 @@ export default function VerificationApplyScreen() {
         attestation_accepted_at: new Date().toISOString(),
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        rejection_reason: null,
+        info_request_note: null,
+        reviewed_at: null,
+        reviewed_by: null,
       };
-      if (application && ["draft", "needs_more_info", "rejected"].includes(application.status)) {
+      const continueSameRow =
+        application &&
+        (application.status === "draft" || application.status === "needs_more_info");
+      if (continueSameRow) {
         const { data, error: updateError } = await supabase
           .from("verification_applications")
           .update(payload)
@@ -236,10 +245,10 @@ export default function VerificationApplyScreen() {
                 <Text style={styles.bannerText}>
                   Status: <Text style={styles.bold}>{application.status.toUpperCase()}</Text>
                 </Text>
-                {application.infoRequestNote ? (
+                {application.status === "needs_more_info" && application.infoRequestNote ? (
                   <Text style={styles.bannerText}>Info requested: {application.infoRequestNote}</Text>
                 ) : null}
-                {application.rejectionReason ? (
+                {application.status === "rejected" && application.rejectionReason ? (
                   <Text style={styles.bannerText}>Rejection: {application.rejectionReason}</Text>
                 ) : null}
               </View>

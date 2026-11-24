@@ -157,6 +157,8 @@ export default function VerificationApplyPage() {
     setMessage(null);
     try {
       const supabase = createBrowserSupabaseClient();
+      // New application after reject; continue same row for draft / info-request.
+      // Always clear prior review fields so SUBMITTED never surfaces stale notes.
       const payload = {
         creator_id: creator.id,
         status: "submitted",
@@ -167,8 +169,15 @@ export default function VerificationApplyPage() {
         attestation_accepted_at: new Date().toISOString(),
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        rejection_reason: null,
+        info_request_note: null,
+        reviewed_at: null,
+        reviewed_by: null,
       };
-      if (application && ["draft", "needs_more_info", "rejected"].includes(application.status)) {
+      const continueSameRow =
+        application &&
+        (application.status === "draft" || application.status === "needs_more_info");
+      if (continueSameRow) {
         const { data, error: updateError } = await supabase
           .from("verification_applications")
           .update(payload)
@@ -315,8 +324,12 @@ export default function VerificationApplyPage() {
           <span className={statusPillClass(application.status)}>
             {application.status.toUpperCase()}
           </span>
-          {application.infoRequestNote ? <p>Info requested: {application.infoRequestNote}</p> : null}
-          {application.rejectionReason ? <p>Rejection: {application.rejectionReason}</p> : null}
+          {application.status === "needs_more_info" && application.infoRequestNote ? (
+            <p>Info requested: {application.infoRequestNote}</p>
+          ) : null}
+          {application.status === "rejected" && application.rejectionReason ? (
+            <p>Rejection: {application.rejectionReason}</p>
+          ) : null}
         </div>
       ) : null}
 
