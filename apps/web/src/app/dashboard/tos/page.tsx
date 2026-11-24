@@ -90,8 +90,8 @@ function CreatorTosForm() {
         <span className="kicker">Creator onboarding</span>
         <h1>Creator Terms of Service</h1>
         <p>
-          Accept these terms before listing datacuts or using creator dashboard tools. Personal and
-          Commercial license templates on each listing are separate from this acceptance gate.
+          You’ll need to accept these Creator Terms before managing listings. License type on each
+          datacut is chosen later, when you publish.
         </p>
       </div>
 
