@@ -150,6 +150,11 @@ export default function DashboardPage() {
       <div className="page-intro">
         <span className="kicker">Creator dashboard</span>
         <h1>{creator?.name ?? "Your store"}</h1>
+        {creator ? (
+          <Link className="link-button" href={`/creators/${creator.slug}`}>
+            View storefront
+          </Link>
+        ) : null}
         <p>
           Draft and publish datacuts, apply for verification, and manage your storefront.
           {creator?.verified ? " You are Verified." : " Unverified creators can still list and sell."}
@@ -165,11 +170,6 @@ export default function DashboardPage() {
           <span>{listings.length}</span>
         </div>
         <div className="dashboard-section-actions">
-          {creator ? (
-            <Link className="link-button" href={`/creators/${creator.slug}`}>
-              View storefront
-            </Link>
-          ) : null}
           <Link className="primary-button small" href="/dashboard/listings/new">
             New listing
           </Link>
