@@ -35,7 +35,6 @@ export default async function CreatorStorefrontPage({ params }: Props) {
             {creator.name}
             {creator.verified ? <Icon name="shield" size={28} /> : null}
           </h1>
-          <p>{creator.bio}</p>
         </div>
         <div className="creator-stat">
           <strong>{creator.cuts}</strong>
