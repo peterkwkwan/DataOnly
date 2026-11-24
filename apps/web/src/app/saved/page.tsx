@@ -8,7 +8,7 @@ import { useSaved } from "@/context/saved-context";
 import { catalog } from "@/lib/catalog";
 
 export default function SavedPage() {
-  const { savedIds, syncError } = useSaved();
+  const { savedIds, hydrated, syncError } = useSaved();
   const { user, configured } = useAuth();
   // Client catalog is mock (ids 1–4); those match supabase/seed.sql. Live-only
   // listing ids still count in savedIds but may not resolve to a card here.
@@ -30,14 +30,14 @@ export default function SavedPage() {
       ) : null}
       <div className="results-header">
         <div>
-          <h2>{savedIds.length} saved</h2>
+          <h2>{hydrated ? `${savedIds.length} saved` : "Saved"}</h2>
           <span>{statusLabel}</span>
         </div>
         <Link className="link-button" href="/explore">
           Explore marketplace <Icon name="arrow" size={17} />
         </Link>
       </div>
-      {cuts.length ? (
+      {!hydrated ? null : cuts.length ? (
         <div className="datacut-grid page-grid">
           {cuts.map((cut) => (
             <DatacutCard key={cut.id} cut={cut} />

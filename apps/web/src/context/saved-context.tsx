@@ -16,6 +16,8 @@ import { useAuth } from "@/context/auth-context";
 
 type SavedContextValue = {
   savedIds: number[];
+  /** False until auth settles and local/cloud hydrate finishes — avoid rendering seed. */
+  hydrated: boolean;
   isSaved: (id: number) => boolean;
   toggleSaved: (id: number) => void;
   /** Last persistence/hydrate failure, if any — for debugging without noisy toasts. */
@@ -64,8 +66,9 @@ function markLocalSavesMigrated(userId: string) {
 
 export function SavedProvider({ children }: { children: React.ReactNode }) {
   const { user, configured, loading: authLoading } = useAuth();
-  // Seed is first-paint only for guests; signed-in hydrate replaces it from cloud.
-  const [savedIds, setSavedIds] = useState<number[]>(() => catalog.getInitialSavedIds());
+  // Start empty — never flash demo seed (e.g. Residential Energy id 2) before hydrate.
+  // Guests without localStorage get the seed only after hydrate below.
+  const [savedIds, setSavedIds] = useState<number[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const savedIdsRef = useRef(savedIds);
@@ -220,11 +223,12 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       savedIds,
+      hydrated,
       isSaved: (id: number) => savedIds.includes(id),
       toggleSaved,
       syncError,
     }),
-    [savedIds, toggleSaved, syncError],
+    [savedIds, hydrated, toggleSaved, syncError],
   );
 
   return <SavedContext.Provider value={value}>{children}</SavedContext.Provider>;

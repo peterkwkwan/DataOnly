@@ -18,7 +18,7 @@ const NAV = [
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { savedIds } = useSaved();
+  const { savedIds, hydrated } = useSaved();
   const { user, profile, signOut, isAdmin, configured } = useAuth();
   const [mobileMenu, setMobileMenu] = useState(false);
   const accountEmail = profile?.email || user?.email || "";
@@ -49,7 +49,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             </Link>
             <Link className="icon-button" href="/saved" aria-label="Saved">
               <Icon name="bookmark" size={19} />
-              <span className="save-count">{savedIds.length}</span>
+              <span className="save-count">{hydrated ? savedIds.length : 0}</span>
             </Link>
             {user ? (
               <Link
