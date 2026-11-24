@@ -359,18 +359,20 @@ export default function DashboardPage() {
             <h2 id="dashboard-payouts-heading">Payouts</h2>
           </div>
           <div className="dashboard-section-actions">
-            <button
-              type="button"
-              className="primary-button small"
-              disabled={connectBusy}
-              onClick={() => void startConnectOnboarding()}
-            >
-              {connectBusy
-                ? "Opening…"
-                : connect?.onboardingComplete
-                  ? "Update payout settings"
-                  : "Set up payouts"}
-            </button>
+            {connectBusy ? (
+              <p className="dashboard-payouts-redirect" role="status" aria-live="polite">
+                <span className="dashboard-payouts-spinner" aria-hidden="true" />
+                Redirecting to Stripe — don&apos;t close this tab.
+              </p>
+            ) : (
+              <button
+                type="button"
+                className="primary-button small"
+                onClick={() => void startConnectOnboarding()}
+              >
+                {connect?.onboardingComplete ? "Update payout settings" : "Set up payouts"}
+              </button>
+            )}
           </div>
         </div>
         <p className="dashboard-verification-status">
@@ -383,14 +385,7 @@ export default function DashboardPage() {
                 ? "Payouts active — you can receive sales"
                 : "Finish setup to receive payouts"}
         </p>
-        {connectBusy ? (
-          <p className="dashboard-payouts-redirect" role="status" aria-live="polite">
-            <span className="dashboard-payouts-spinner" aria-hidden="true" />
-            Redirecting to Stripe — don&apos;t close this tab.
-          </p>
-        ) : connectMsg ? (
-          <p className="empty-hint">{connectMsg}</p>
-        ) : null}
+        {connectMsg ? <p className="empty-hint">{connectMsg}</p> : null}
         <p className="empty-hint">
           Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee.
         </p>

@@ -3284,13 +3284,14 @@ footer button {
   font-weight: 650;
 }
 .dashboard-payouts-redirect {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 8px;
+  margin: 0;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.45;
+  max-width: min(100%, 320px);
 }
 .dashboard-payouts-spinner {
   flex: 0 0 auto;
