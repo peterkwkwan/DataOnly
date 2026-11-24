@@ -3232,7 +3232,7 @@ footer button {
 }
 .dashboard-username {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
   gap: 12px;
 }
