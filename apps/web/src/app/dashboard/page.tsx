@@ -90,27 +90,30 @@ export default function DashboardPage() {
     setConnectMsg(null);
     try {
       const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
-      const data = (await res.json()) as {
-        url?: string;
-        error?: string;
-        code?: string;
-        setupHint?: string;
-      };
-      if (!res.ok) {
-        setConnectMsg(
-          [data.error, data.setupHint].filter(Boolean).join(" ") || "Could not start payout setup",
-        );
+      let data: { url?: string; error?: string; code?: string } = {};
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        setConnectBusy(false);
+        setConnectMsg("Couldn't open payout setup. Please try again.");
         return;
       }
-      if (!data.url) {
-        setConnectMsg("Could not open payout setup. Try again.");
+      if (!res.ok || !data.url) {
+        setConnectBusy(false);
+        if (res.status === 401) {
+          setConnectMsg("Sign in to set up payouts.");
+        } else if (res.status === 503 || data.code === "stripe_not_configured") {
+          setConnectMsg("Payouts aren't available right now. Please try again later.");
+        } else {
+          setConnectMsg("Couldn't open payout setup. Please try again.");
+        }
         return;
       }
+      // Keep spinner + message until the browser navigates away.
       window.location.href = data.url;
-    } catch (err) {
-      setConnectMsg(formatClientError(err, "Could not start payout setup"));
-    } finally {
+    } catch {
       setConnectBusy(false);
+      setConnectMsg("Couldn't open payout setup. Check your connection and try again.");
     }
   }
 
@@ -380,7 +383,14 @@ export default function DashboardPage() {
                 ? "Payouts active — you can receive sales"
                 : "Finish setup to receive payouts"}
         </p>
-        {connectMsg ? <p className="empty-hint">{connectMsg}</p> : null}
+        {connectBusy ? (
+          <p className="dashboard-payouts-redirect" role="status" aria-live="polite">
+            <span className="dashboard-payouts-spinner" aria-hidden="true" />
+            Redirecting to Stripe — don&apos;t close this tab.
+          </p>
+        ) : connectMsg ? (
+          <p className="empty-hint">{connectMsg}</p>
+        ) : null}
         <p className="empty-hint">
           Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee.
         </p>

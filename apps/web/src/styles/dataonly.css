@@ -3283,6 +3283,29 @@ footer button {
   color: var(--ink);
   font-weight: 650;
 }
+.dashboard-payouts-redirect {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.dashboard-payouts-spinner {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: dashboard-payouts-spin 0.7s linear infinite;
+}
+@keyframes dashboard-payouts-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .tos-card {
   max-width: 640px;
   margin: 0 0 64px;
