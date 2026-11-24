@@ -3279,6 +3279,12 @@ footer button {
   background: var(--subtle, #f0f1eb);
   border: 1px solid var(--line);
 }
+.status-banner-note {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.45;
+}
 .chip-fieldset {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);

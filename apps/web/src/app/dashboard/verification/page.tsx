@@ -302,6 +302,11 @@ export default function VerificationApplyPage() {
       {application ? (
         <div className="status-banner">
           <b>Status:</b> {application.status}
+          {application.status === "submitted" || application.status === "under_review" ? (
+            <p className="status-banner-note">
+              Your application is under processing. We will update your status after 5-7 business days.
+            </p>
+          ) : null}
           {application.infoRequestNote ? <p>Info requested: {application.infoRequestNote}</p> : null}
           {application.rejectionReason ? <p>Rejection: {application.rejectionReason}</p> : null}
         </div>
