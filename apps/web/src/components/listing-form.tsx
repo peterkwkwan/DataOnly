@@ -77,6 +77,22 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
 
   const blurb = useMemo(() => licenseBlurb(license), [license]);
 
+  const canSave = useMemo(() => {
+    const priceNum = Number(price);
+    return (
+      title.trim().length > 0 &&
+      (slug.trim() || slugify(title)).length > 0 &&
+      categoryId.trim().length > 0 &&
+      price.trim().length > 0 &&
+      Number.isFinite(priceNum) &&
+      priceNum >= 0 &&
+      Boolean(format) &&
+      Boolean(license) &&
+      description.trim().length > 0 &&
+      Boolean(status)
+    );
+  }, [title, slug, categoryId, price, format, license, description, status]);
+
   useEffect(() => {
     if (!formatOpen) return;
     function onPointerDown(event: MouseEvent) {
@@ -131,6 +147,7 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (!canSave || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -175,7 +192,7 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
   return (
     <form className="auth-card listing-form" onSubmit={onSubmit}>
       <label>
-        Title
+        Title *
         <input
           required
           value={title}
@@ -186,11 +203,11 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         />
       </label>
       <label>
-        Slug
+        Slug *
         <input required value={slug} onChange={(e) => setSlug(slugify(e.target.value))} />
       </label>
       <label>
-        Category
+        Category *
         <select required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -201,12 +218,12 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
       </label>
       <div className="form-grid">
         <label>
-          Price (USD)
+          Price (USD) *
           <input type="number" min={0} step="1" required value={price} onChange={(e) => setPrice(e.target.value)} />
         </label>
         <div className="industry-field" ref={formatRef}>
           <span className="industry-field-label" id={formatFieldId}>
-            Format
+            Format *
           </span>
           <button
             type="button"
@@ -264,16 +281,17 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         </div>
         <label>
           Size
-          <input required value={size} onChange={(e) => setSize(e.target.value)} />
+          <input value={size} onChange={(e) => setSize(e.target.value)} />
         </label>
         <label>
           Records
-          <input required value={records} onChange={(e) => setRecords(e.target.value)} />
+          <input value={records} onChange={(e) => setRecords(e.target.value)} />
         </label>
       </div>
       <label>
-        License template
+        License template *
         <select
+          required
           value={license}
           onChange={(e) => setLicense(e.target.value as LicenseTemplate)}
         >
@@ -283,7 +301,7 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
       </label>
       <p className="form-footnote">{blurb}</p>
       <label>
-        Description
+        Description *
         <textarea
           required
           rows={5}
@@ -292,15 +310,15 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         />
       </label>
       <label>
-        Status
-        <select value={status} onChange={(e) => setStatus(e.target.value as ListingStatus)}>
+        Status *
+        <select required value={status} onChange={(e) => setStatus(e.target.value as ListingStatus)}>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
         </select>
       </label>
       {error ? <p className="form-error">{error}</p> : null}
       <div className="form-actions">
-        <button type="submit" className="primary-button" disabled={busy}>
+        <button type="submit" className="primary-button" disabled={busy || !canSave}>
           {busy ? "Saving…" : "Save listing"}
         </button>
         <Link className="text-button" href="/dashboard">
