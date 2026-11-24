@@ -118,6 +118,7 @@ export async function POST(request: Request) {
 
   // Destination charges + application_fee are incompatible with Managed Payments
   // (Dashboard may default it on). Opt out per session so Connect fees still work.
+  // Decision: project store docs/stripe-managed-payments.md
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     // Stripe API: managed_payments[enabled]=false (SDK object form).
