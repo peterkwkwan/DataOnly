@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import { formatClientError } from "@/lib/errors";
@@ -153,11 +152,6 @@ function SignInForm() {
             </button>
           ) : null}
         </div>
-        <p className="form-footnote">
-          <Link href="/dashboard">Creator dashboard</Link>
-          {" · "}
-          <Link href="/">Back home</Link>
-        </p>
       </form>
     </section>
   );
