@@ -187,7 +187,13 @@ export default function DashboardPage() {
               <div>
                 <b>{cut.title}</b>
                 <span>
-                  {cut.status ?? "draft"} · {cut.license} · ${cut.price}
+                  <span
+                    className={`listing-status listing-status--${cut.status ?? "draft"}`}
+                  >
+                    {cut.status ?? "draft"}
+                  </span>
+                  {" · "}
+                  {cut.license} · ${cut.price}
                 </span>
               </div>
               <Link href={`/dashboard/listings/${cut.id}`}>Edit</Link>
