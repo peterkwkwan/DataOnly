@@ -95,53 +95,55 @@ function CreatorTosForm() {
         </p>
       </div>
 
-      <p className="tos-draft-banner" role="status">
-        {CREATOR_TOS_DRAFT_NOTICE}
-      </p>
-      <p className="form-footnote">
-        Version <code>{CREATOR_TOS_VERSION}</code>
+      <div className="tos-card">
+        <p className="tos-draft-banner" role="status">
+          {CREATOR_TOS_DRAFT_NOTICE}
+        </p>
+        <p className="form-footnote">
+          Version <code>{CREATOR_TOS_VERSION}</code>
+          {alreadyAccepted ? (
+            <>
+              {" "}
+              · Accepted {profile?.tosAcceptedAt ? new Date(profile.tosAcceptedAt).toLocaleString() : ""}
+            </>
+          ) : null}
+        </p>
+
+        <ol className="tos-sections">
+          {CREATOR_TOS_SECTIONS.map((section) => (
+            <li key={section.title}>
+              <h2>{section.title}</h2>
+              <p>{section.body}</p>
+            </li>
+          ))}
+        </ol>
+
         {alreadyAccepted ? (
-          <>
-            {" "}
-            · Accepted {profile?.tosAcceptedAt ? new Date(profile.tosAcceptedAt).toLocaleString() : ""}
-          </>
-        ) : null}
-      </p>
-
-      <ol className="tos-sections">
-        {CREATOR_TOS_SECTIONS.map((section) => (
-          <li key={section.title}>
-            <h2>{section.title}</h2>
-            <p>{section.body}</p>
-          </li>
-        ))}
-      </ol>
-
-      {alreadyAccepted ? (
-        <div className="dashboard-actions">
-          <Link className="primary-button" href={nextPath}>
-            Continue to dashboard
-          </Link>
-        </div>
-      ) : (
-        <form className="tos-form listing-form" onSubmit={onSubmit}>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={(e) => setChecked(e.target.checked)}
-              required
-            />
-            {CREATOR_TOS_ACCEPT_LABEL}
-          </label>
-          {error ? <p className="form-error">{error}</p> : null}
-          <div className="form-actions">
-            <button type="submit" className="primary-button" disabled={!checked || busy}>
-              {busy ? "Saving…" : "Accept Creator Terms"}
-            </button>
+          <div className="dashboard-actions">
+            <Link className="primary-button" href={nextPath}>
+              Continue to dashboard
+            </Link>
           </div>
-        </form>
-      )}
+        ) : (
+          <form className="tos-form" onSubmit={onSubmit}>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+                required
+              />
+              {CREATOR_TOS_ACCEPT_LABEL}
+            </label>
+            {error ? <p className="form-error">{error}</p> : null}
+            <div className="form-actions">
+              <button type="submit" className="primary-button" disabled={!checked || busy}>
+                {busy ? "Saving…" : "Accept Creator Terms"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </section>
   );
 }

@@ -3283,8 +3283,18 @@ footer button {
   color: var(--ink);
   font-weight: 650;
 }
+.tos-card {
+  max-width: 640px;
+  margin: 0 0 64px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  display: grid;
+  gap: 16px;
+}
 .tos-draft-banner {
-  margin: 0 0 12px;
+  margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -3295,18 +3305,15 @@ footer button {
   font-weight: 600;
 }
 .tos-sections {
-  margin: 18px 0 28px;
+  margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 .tos-sections li {
   margin: 0;
-  padding: 18px 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: #fff;
+  padding: 0;
 }
 .tos-sections h2 {
   margin: 0 0 8px;
@@ -3318,7 +3325,18 @@ footer button {
   line-height: 1.5;
 }
 .tos-form {
-  max-width: 640px;
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+}
+.tos-form .form-actions .primary-button {
+  width: 100%;
+  display: flex;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
 }
 .listing-table {
   display: grid;
