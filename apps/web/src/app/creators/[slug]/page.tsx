@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
 import { Icon } from "@/components/icons";
 import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
@@ -31,9 +32,9 @@ export default async function CreatorStorefrontPage({ params }: Props) {
       <div className="page-intro creators-intro">
         <div>
           <span className="kicker">Creator storefront</span>
-          <h1 className="creator-title">
+          <h1 className="dashboard-username">
             {creator.name}
-            {creator.verified ? <Icon name="shield" size={28} /> : null}
+            {creator.verified ? <Verified /> : null}
           </h1>
         </div>
         <div className="creator-stat">
