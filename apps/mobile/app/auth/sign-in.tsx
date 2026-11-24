@@ -17,55 +17,63 @@ import { useAuth } from "@/context/AuthContext";
 import { createMobileSupabaseClient, isMobileSupabaseConfigured } from "@/lib/supabase";
 import { colors } from "@/lib/theme";
 
+type PasswordIntent = "sign-in" | "create";
+
 export default function SignInScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams<{ next?: string }>();
   const next = typeof params.next === "string" ? params.next : "/verification";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordIntent, setPasswordIntent] = useState<PasswordIntent>("sign-in");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const creating = passwordIntent === "create";
 
   useEffect(() => {
     if (user) router.replace(next as "/verification");
   }, [next, user]);
 
-  async function onSignIn() {
+  function switchIntent(nextIntent: PasswordIntent) {
+    setPasswordIntent(nextIntent);
     setError(null);
     setMessage(null);
-    if (!isMobileSupabaseConfigured()) {
-      setError("Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const supabase = createMobileSupabaseClient();
-      const { error: signError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signError) throw signError;
-      router.replace(next as "/verification");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed");
-    } finally {
-      setBusy(false);
-    }
   }
 
-  async function onSignUp() {
+  async function onSubmit() {
     setError(null);
     setMessage(null);
     if (!isMobileSupabaseConfigured()) {
-      setError("Supabase is not configured.");
+      setError(
+        creating
+          ? "Supabase is not configured."
+          : "Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
+      );
       return;
     }
     setBusy(true);
     try {
       const supabase = createMobileSupabaseClient();
-      const { error: signError } = await supabase.auth.signUp({ email, password });
-      if (signError) throw signError;
-      setMessage("Account created. Confirm email if required, then sign in.");
+      if (passwordIntent === "create") {
+        const { error: signError } = await supabase.auth.signUp({ email, password });
+        if (signError) throw signError;
+        setMessage("Account created. Confirm email if required, then sign in.");
+        setPasswordIntent("sign-in");
+      } else {
+        // Sign-in mode only — never call signUp here.
+        const { error: signError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signError) throw signError;
+        router.replace(next as "/verification");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-up failed");
+      setError(
+        err instanceof Error
+          ? err.message
+          : creating
+            ? "Sign-up failed"
+            : "Sign-in failed",
+      );
     } finally {
       setBusy(false);
     }
@@ -79,9 +87,14 @@ export default function SignInScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <PageHeader kicker="ACCOUNT" title="Sign in" />
+            <PageHeader
+              kicker="ACCOUNT"
+              title={creating ? "Create account" : "Sign in"}
+            />
             <Text style={styles.body}>
-              Sign in with email and password to apply for Verified on mobile.
+              {creating
+                ? "Create a new email + password account to apply for Verified on mobile."
+                : "Sign in with email and password to apply for Verified on mobile."}
             </Text>
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
@@ -94,6 +107,7 @@ export default function SignInScreen() {
                 onChangeText={setEmail}
                 placeholder="you@example.com"
                 placeholderTextColor={colors.muted}
+                autoComplete="email"
               />
             </View>
             <View style={styles.field}>
@@ -105,6 +119,7 @@ export default function SignInScreen() {
                 onChangeText={setPassword}
                 placeholder="••••••••"
                 placeholderTextColor={colors.muted}
+                autoComplete={creating ? "new-password" : "password"}
               />
             </View>
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -112,12 +127,22 @@ export default function SignInScreen() {
             <Pressable
               style={[styles.primary, busy && styles.disabled]}
               disabled={busy}
-              onPress={() => void onSignIn()}
+              onPress={() => void onSubmit()}
             >
-              <Text style={styles.primaryText}>{busy ? "Working…" : "Sign in"}</Text>
+              <Text style={styles.primaryText}>
+                {busy ? "Working…" : creating ? "Create account" : "Sign in"}
+              </Text>
             </Pressable>
-            <Pressable style={styles.secondary} disabled={busy} onPress={() => void onSignUp()}>
-              <Text style={styles.secondaryText}>Create account</Text>
+            <Pressable
+              style={styles.secondary}
+              disabled={busy}
+              onPress={() => switchIntent(creating ? "sign-in" : "create")}
+            >
+              <Text style={styles.secondaryText}>
+                {creating
+                  ? "Already have an account? Sign in"
+                  : "Need an account? Create account"}
+              </Text>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
