@@ -61,7 +61,7 @@ export default function DashboardPage() {
           supabase
             .from("datacuts")
             .select(
-              "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, creators(name), categories(name)",
+              "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, creators(name, verified), categories(name)",
             )
             .eq("creator_id", ensured.id)
             .order("updated_at", { ascending: false }),
@@ -166,17 +166,20 @@ export default function DashboardPage() {
     <section className="page-view dashboard-view">
       <div className="page-intro">
         <span className="kicker">Creator dashboard</span>
-        <h1>{creator?.name ?? "Your store"}</h1>
+        <h1 className="dashboard-username">
+          {creator?.name ?? "Your store"}
+          {creator?.verified ? <Verified /> : null}
+        </h1>
         {creator ? (
           <Link className="link-button" href={`/creators/${creator.slug}`}>
             View storefront
           </Link>
         ) : null}
         <p>
-          Draft and publish datacuts, apply for verification, and manage your storefront.
-          {creator?.verified ? " You are Verified." : " Unverified creators can still list and sell."}
+          {creator?.verified
+            ? "Draft and publish datacuts, and manage your storefront."
+            : "Draft and publish datacuts, apply for verification, and manage your storefront. Unverified creators can still list and sell."}
         </p>
-        {creator?.verified ? <Verified /> : null}
       </div>
 
       {error ? <p className="form-error dashboard-inline-error">{error}</p> : null}
@@ -234,11 +237,13 @@ export default function DashboardPage() {
           <div>
             <h2 id="dashboard-verification-heading">Verification</h2>
           </div>
-          <div className="dashboard-section-actions">
-            <Link className="primary-button small" href="/dashboard/verification">
-              Apply for Verified
-            </Link>
-          </div>
+          {!creator?.verified ? (
+            <div className="dashboard-section-actions">
+              <Link className="primary-button small" href="/dashboard/verification">
+                Apply for Verified
+              </Link>
+            </div>
+          ) : null}
         </div>
         <p className="dashboard-verification-status">
           <b>Status:</b> {verificationStatusLabel(creator, verification)}

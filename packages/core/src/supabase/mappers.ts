@@ -65,7 +65,10 @@ export type DatacutRow = {
   license: string;
   description: string;
   status: string;
-  creators?: { name: string } | { name: string }[] | null;
+  creators?:
+    | { name: string; verified?: boolean | null }
+    | { name: string; verified?: boolean | null }[]
+    | null;
   categories?: { name: string } | { name: string }[] | null;
 };
 
@@ -103,6 +106,18 @@ function oneName(
   if (!rel) return fallback;
   if (Array.isArray(rel)) return rel[0]?.name ?? fallback;
   return rel.name ?? fallback;
+}
+
+function oneVerified(
+  rel:
+    | { verified?: boolean | null }
+    | { verified?: boolean | null }[]
+    | null
+    | undefined,
+): boolean {
+  if (!rel) return false;
+  if (Array.isArray(rel)) return !!rel[0]?.verified;
+  return !!rel.verified;
 }
 
 export function mapCategory(row: CategoryRow): Category {
@@ -143,6 +158,7 @@ export function mapDatacut(row: DatacutRow): Datacut {
     title: row.title,
     creatorId: row.creator_id,
     creatorName: oneName(row.creators, "Unknown creator"),
+    creatorVerified: oneVerified(row.creators),
     categoryId: row.category_id,
     categoryName: oneName(row.categories, "Uncategorized"),
     price: Number(row.price),

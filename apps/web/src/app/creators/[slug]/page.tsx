@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
+import { Icon } from "@/components/icons";
 import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -31,9 +31,11 @@ export default async function CreatorStorefrontPage({ params }: Props) {
       <div className="page-intro creators-intro">
         <div>
           <span className="kicker">Creator storefront</span>
-          <h1>{creator.name}</h1>
+          <h1 className="creator-title">
+            {creator.name}
+            {creator.verified ? <Icon name="shield" size={28} /> : null}
+          </h1>
           <p>{creator.bio}</p>
-          {creator.verified ? <Verified /> : null}
         </div>
         <div className="creator-stat">
           <strong>{creator.cuts}</strong>
@@ -56,8 +58,10 @@ export default async function CreatorStorefrontPage({ params }: Props) {
           <button type="button" className="follow-button">
             Follow
           </button>
-          <h2>{creator.name}</h2>
-          {creator.verified ? <Verified /> : null}
+          <h2 className="creator-title">
+            {creator.name}
+            {creator.verified ? <Icon name="shield" size={16} /> : null}
+          </h2>
           <p>{creator.specialty} · Steam-like shop for expert-curated datacuts.</p>
           <div className="store-stats">
             <span>

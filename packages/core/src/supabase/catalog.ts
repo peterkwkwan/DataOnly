@@ -42,7 +42,7 @@ function normalize(value: string) {
 }
 
 const DATACUT_SELECT =
-  "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, creators(name), categories(name)";
+  "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, creators(name, verified), categories(name)";
 
 export function createSupabaseCatalog(client: SupabaseClient): AsyncCatalogRepository {
   async function loadPublished(opts: {

@@ -7,10 +7,17 @@ import { Icon } from "@/components/icons";
 import { useSaved } from "@/context/saved-context";
 import { catalog } from "@/lib/catalog";
 
+function isCreatorVerified(cut: Datacut): boolean {
+  if (typeof cut.creatorVerified === "boolean") return cut.creatorVerified;
+  return !!catalog.getCreators().find((c) => c.id === cut.creatorId)?.verified;
+}
+
 export function DatacutCard({ cut }: { cut: Datacut }) {
   const { isSaved, toggleSaved } = useSaved();
   const saved = isSaved(cut.id);
   const creator = catalog.getCreators().find((c) => c.id === cut.creatorId);
+  const verified = isCreatorVerified(cut);
+  const storeHref = creator ? `/creators/${creator.slug}` : `/creators`;
 
   return (
     <article className="datacut-card">
@@ -27,8 +34,9 @@ export function DatacutCard({ cut }: { cut: Datacut }) {
         <Icon name="bookmark" size={18} filled={saved} />
       </button>
       <div className="cut-body">
-        <Link href={creator ? `/creators/${creator.slug}` : "/creators"} className="creator-name">
-          {cut.creatorName} {creator?.verified ? <Icon name="shield" size={13} /> : null}
+        <Link href={storeHref} className="creator-name">
+          {cut.creatorName}
+          {verified ? <Icon name="shield" size={13} /> : null}
         </Link>
         <h3>
           <Link href={`/datacuts/${cut.slug}`}>{cut.title}</Link>

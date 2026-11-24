@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
+import { Icon } from "@/components/icons";
 import { SearchBox } from "@/components/search-box";
 import { getCatalog } from "@/lib/catalog";
 
@@ -59,8 +59,10 @@ export default async function SearchPage({ searchParams }: Props) {
                     <div className="large-avatar" style={{ background: creator.color }}>
                       {creator.initials}
                     </div>
-                    <h2>{creator.name}</h2>
-                    <Verified />
+                    <h2 className="creator-title">
+                      {creator.name}
+                      <Icon name="shield" size={16} />
+                    </h2>
                   </div>
                 </Link>
               ))}
@@ -97,7 +99,12 @@ export default async function SearchPage({ searchParams }: Props) {
                 {results.creators.map((c) => (
                   <Link key={c.id} href={`/creators/${c.slug}`}>
                     {c.name}
-                    {c.verified ? " · Verified" : ""}
+                    {c.verified ? (
+                      <>
+                        {" "}
+                        <Icon name="shield" size={13} />
+                      </>
+                    ) : null}
                   </Link>
                 ))}
               </div>

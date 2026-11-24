@@ -28,8 +28,9 @@ function MobileCutCard({ cut }: { cut: Datacut }) {
         <Icon name="bookmark" size={17} filled={saved} />
       </button>
       <div className="m-cut-copy">
-        <small>
-          {cut.creatorName} <Icon name="shield" size={11} />
+        <small className="creator-name">
+          {cut.creatorName}
+          {cut.creatorVerified ? <Icon name="shield" size={11} /> : null}
         </small>
         <h3>
           <Link href={`/datacuts/${cut.slug}`}>{cut.title}</Link>
@@ -188,8 +189,9 @@ export function MobileShell() {
                   <h3>
                     <Link href={`/datacuts/${cut.slug}`}>{cut.title}</Link>
                   </h3>
-                  <span>
-                    {cut.creatorName} <Icon name="shield" size={11} />
+                  <span className="creator-name">
+                    {cut.creatorName}
+                    {cut.creatorVerified ? <Icon name="shield" size={11} /> : null}
                   </span>
                   <div>
                     <span>
@@ -321,7 +323,10 @@ export function MobileShell() {
                     <h3>
                       <Link href={`/datacuts/${cut.slug}`}>{cut.title}</Link>
                     </h3>
-                    <span>{cut.creatorName}</span>
+                    <span className="creator-name">
+                      {cut.creatorName}
+                      {cut.creatorVerified ? <Icon name="shield" size={11} /> : null}
+                    </span>
                     <div>
                       <span>{cut.records} records</span>
                       <b>${cut.price}</b>

@@ -59,6 +59,8 @@ export interface Datacut {
   title: string;
   creatorId: string;
   creatorName: string;
+  /** From creators.verified join / mock creator record */
+  creatorVerified?: boolean;
   categoryId: string;
   categoryName: string;
   price: number;

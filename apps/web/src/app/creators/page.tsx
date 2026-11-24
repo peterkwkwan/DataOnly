@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Verified } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { getCatalog } from "@/lib/catalog";
 
@@ -50,10 +49,10 @@ export default async function CreatorsPage() {
               <button type="button" className="follow-button">
                 Follow
               </button>
-              <h2>
+              <h2 className="creator-title">
                 <Link href={`/creators/${creator.slug}`}>{creator.name}</Link>
+                {creator.verified ? <Icon name="shield" size={16} /> : null}
               </h2>
-              {creator.verified ? <Verified /> : null}
               <p>{creator.bio}</p>
               <div className="store-stats">
                 <span>

@@ -1268,8 +1268,14 @@
 }
 .store-body h2 {
   font: 650 19px "Manrope";
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 8px 5px 0;
+}
+.store-body h2 svg {
+  color: #507561;
+  flex-shrink: 0;
 }
 .store-body p {
   color: #76817c;
@@ -3223,6 +3229,35 @@ footer button {
   gap: 12px;
   align-items: center;
   justify-content: flex-end;
+}
+.dashboard-username {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.dashboard-username .verified {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.creator-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.creator-title svg {
+  color: #507561;
+  flex-shrink: 0;
+}
+.page-intro h1.creator-title svg {
+  color: #446855;
+}
+.detail-creator-name {
+  display: inline-flex;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
 }
 .dashboard-verification-card {
   margin: 8px 0 64px;

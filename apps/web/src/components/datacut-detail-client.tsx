@@ -3,7 +3,7 @@
 import type { Datacut } from "@dataonly/core";
 import Link from "next/link";
 import { useState } from "react";
-import { Art, Verified } from "@/components/brand";
+import { Art } from "@/components/brand";
 import { BuyModal } from "@/components/buy-modal";
 import { Icon } from "@/components/icons";
 import { useSaved } from "@/context/saved-context";
@@ -20,6 +20,7 @@ export function DatacutDetailClient({
   const { isSaved, toggleSaved } = useSaved();
   const [buyOpen, setBuyOpen] = useState(false);
   const saved = isSaved(cut.id);
+  const verified = creatorVerified || !!cut.creatorVerified;
 
   return (
     <div className="detail-layout">
@@ -30,10 +31,13 @@ export function DatacutDetailClient({
         <span className="kicker">{cut.categoryName}</span>
         <h1>{cut.title}</h1>
         <div className="detail-meta">
-          <Link href={creatorSlug ? `/creators/${creatorSlug}` : "/creators"}>
+          <Link
+            href={creatorSlug ? `/creators/${creatorSlug}` : "/creators"}
+            className="creator-name detail-creator-name"
+          >
             {cut.creatorName}
+            {verified ? <Icon name="shield" size={13} /> : null}
           </Link>
-          {creatorVerified ? <Verified /> : null}
           <span>
             <Icon name="star" size={14} filled /> {cut.rating} ({cut.reviews})
           </span>
