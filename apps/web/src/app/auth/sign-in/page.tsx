@@ -6,6 +6,12 @@ import { FormEvent, Suspense, useState } from "react";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
+/** Basic check: local@domain.tld (requires @ and a TLD-ish domain segment). */
+function isValidEmail(value: string): boolean {
+  const trimmed = value.trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+}
+
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -17,11 +23,18 @@ function SignInForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const emailOk = isValidEmail(email);
+  const canSubmit =
+    !busy && emailOk && (mode === "magic" || password.length >= 6);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setMessage(null);
+    if (!emailOk) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (!configured) {
       setError("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
       return;
@@ -55,6 +68,10 @@ function SignInForm() {
   async function onSignUpPassword() {
     setError(null);
     setMessage(null);
+    if (!emailOk) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (!configured) {
       setError("Supabase is not configured.");
       return;
@@ -122,11 +139,16 @@ function SignInForm() {
         {error ? <p className="form-error">{error}</p> : null}
         {message ? <p className="form-success">{message}</p> : null}
         <div className="form-actions">
-          <button type="submit" className="primary-button" disabled={busy}>
+          <button type="submit" className="primary-button" disabled={!canSubmit}>
             {mode === "magic" ? "Email magic link" : "Sign in"}
           </button>
           {mode === "password" ? (
-            <button type="button" className="text-button" disabled={busy} onClick={onSignUpPassword}>
+            <button
+              type="button"
+              className="text-button"
+              disabled={!canSubmit}
+              onClick={onSignUpPassword}
+            >
               Create account
             </button>
           ) : null}
