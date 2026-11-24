@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { VerificationApplication } from "@dataonly/core";
+import type { VerificationApplication, VerificationStatus } from "@dataonly/core";
 import {
   mapVerification,
   verifiedSourcePlatformLabel,
@@ -13,6 +13,35 @@ import {
 } from "@dataonly/core";
 
 type QueueItem = VerificationApplication & { creatorName?: string };
+
+function formatAppliedAt(iso: string | null): string {
+  if (!iso) return "Not submitted";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "Applied —";
+  const seconds = Math.round((Date.now() - then) / 1000);
+  if (seconds < 45) return "Applied just now";
+  if (seconds < 90) return "Applied 1 minute ago";
+  if (seconds < 3600) return `Applied ${Math.round(seconds / 60)} minutes ago`;
+  if (seconds < 5400) return "Applied 1 hour ago";
+  if (seconds < 86400) return `Applied ${Math.round(seconds / 3600)} hours ago`;
+  if (seconds < 172800) return "Applied 1 day ago";
+  return `Applied ${Math.round(seconds / 86400)} days ago`;
+}
+
+function displaySourceUrl(url: string): string {
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    const host = parsed.hostname.replace(/^www\./, "");
+    const path = parsed.pathname === "/" ? "" : parsed.pathname;
+    return `${host}${path}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+function statusPillClass(status: VerificationStatus): string {
+  return `status-pill status-pill--${status}`;
+}
 
 export default function AdminVerificationPage() {
   const { user, isAdmin, loading, refreshProfile } = useAuth();
@@ -147,24 +176,38 @@ export default function AdminVerificationPage() {
         <p>Approve, request more info, or reject expert applications.</p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
-      <div className="listing-table">
+      <div className="listing-table admin-queue">
         {items.length === 0 ? (
           <p className="empty-hint">Queue is empty.</p>
         ) : (
           items.map((app) => (
-            <article key={app.id} className="listing-row admin-row">
-              <div>
-                <b>{app.creatorName ?? app.creatorId}</b>
-                <span>
-                  {app.status} · {app.identity}
-                </span>
-                <p>{app.industries.join(", ")}</p>
-                <div className="admin-sources" aria-label="Verified sources">
-                  {app.sources.length > 0 ? (
-                    app.sources.map((source) => (
+            <article key={app.id} className="admin-queue-card">
+              <header className="admin-queue-header">
+                <div className="admin-queue-identity">
+                  <div className="admin-queue-name-row">
+                    <b className="admin-queue-name">{app.creatorName ?? app.identity ?? app.creatorId}</b>
+                    <span className={statusPillClass(app.status)}>{app.status}</span>
+                  </div>
+                  {app.industries.length > 0 ? (
+                    <p className="admin-queue-meta">{app.industries.join(" · ")}</p>
+                  ) : null}
+                </div>
+                <time
+                  className="admin-queue-applied"
+                  dateTime={app.submittedAt ?? undefined}
+                >
+                  {formatAppliedAt(app.submittedAt)}
+                </time>
+              </header>
+
+              <div className="admin-queue-sources" aria-label="Verified sources">
+                <span className="admin-queue-section-label">Verified sources</span>
+                {app.sources.length > 0 ? (
+                  <div className="admin-sources">
+                    {app.sources.map((source) => (
                       <a
                         key={`${source.platform}:${source.url}`}
-                        className="admin-source-chip"
+                        className="admin-source-card"
                         href={source.url}
                         target="_blank"
                         rel="noreferrer"
@@ -172,22 +215,27 @@ export default function AdminVerificationPage() {
                         <span className="admin-source-label">
                           {verifiedSourcePlatformLabel(source.platform)}
                         </span>
-                        <span className="admin-source-url">{source.url}</span>
+                        <span className="admin-source-url">{displaySourceUrl(source.url)}</span>
                       </a>
-                    ))
-                  ) : (
-                    <p className="empty-hint">No verified sources on this application.</p>
-                  )}
-                </div>
-                {app.credentials ? <p>{app.credentials}</p> : null}
-                <label>
-                  Note / reason
-                  <input
-                    value={note[app.id] ?? ""}
-                    onChange={(e) => setNote((n) => ({ ...n, [app.id]: e.target.value }))}
-                  />
-                </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty-hint">No verified sources on this application.</p>
+                )}
               </div>
+
+              {app.credentials ? <p className="admin-queue-credentials">{app.credentials}</p> : null}
+
+              <label className="admin-queue-note">
+                Note / reason
+                <textarea
+                  rows={3}
+                  placeholder="Optional note for approve, request info, or reject…"
+                  value={note[app.id] ?? ""}
+                  onChange={(e) => setNote((n) => ({ ...n, [app.id]: e.target.value }))}
+                />
+              </label>
+
               <div className="admin-actions">
                 <button
                   type="button"
@@ -199,7 +247,7 @@ export default function AdminVerificationPage() {
                 </button>
                 <button
                   type="button"
-                  className="text-button"
+                  className="secondary-button small"
                   disabled={busyId === app.id}
                   onClick={() => void act(app, "under_review")}
                 >
@@ -207,7 +255,7 @@ export default function AdminVerificationPage() {
                 </button>
                 <button
                   type="button"
-                  className="text-button"
+                  className="secondary-button small"
                   disabled={busyId === app.id}
                   onClick={() => void act(app, "request_info")}
                 >
@@ -215,7 +263,7 @@ export default function AdminVerificationPage() {
                 </button>
                 <button
                   type="button"
-                  className="text-button"
+                  className="secondary-button small"
                   disabled={busyId === app.id}
                   onClick={() => void act(app, "reject")}
                 >

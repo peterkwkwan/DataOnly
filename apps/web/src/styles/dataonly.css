@@ -202,6 +202,26 @@
   padding: 11px 16px;
   font-size: 13px;
 }
+.secondary-button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 18px;
+}
+.secondary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.secondary-button.small {
+  padding: 11px 16px;
+  font-size: 13px;
+}
 .menu-button,
 .mobile-menu {
   display: none;
@@ -3269,6 +3289,113 @@ footer button {
 .admin-row {
   flex-direction: column;
 }
+.admin-queue {
+  gap: 16px;
+}
+.admin-queue-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+.admin-queue-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-queue-identity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.admin-queue-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin-queue-name {
+  font-size: 16px;
+  color: var(--ink);
+}
+.admin-queue-meta,
+.admin-queue-applied {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.admin-queue-applied {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.admin-queue-section-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.admin-queue-credentials {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.admin-queue-note {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.admin-queue-note textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+  background: var(--color-subtle);
+}
+.status-pill--submitted,
+.status-pill--draft {
+  background: color-mix(in srgb, var(--color-caution) 55%, #fff);
+}
+.status-pill--under_review {
+  background: color-mix(in srgb, var(--color-info) 45%, #fff);
+}
+.status-pill--needs_more_info {
+  background: color-mix(in srgb, var(--color-warm) 50%, #fff);
+}
+.status-pill--approved {
+  background: color-mix(in srgb, var(--color-positive) 50%, #fff);
+}
+.status-pill--rejected,
+.status-pill--revoked {
+  background: color-mix(in srgb, var(--color-warm) 70%, #fff);
+}
 .admin-actions {
   display: flex;
   flex-wrap: wrap;
@@ -3458,34 +3585,42 @@ footer button {
 .verified-source-remove-spacer {
   width: 64px;
 }
+.admin-queue-sources .empty-hint {
+  margin: 0;
+}
 .admin-sources {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 8px 0 12px;
+  margin: 0;
 }
+.admin-source-card,
 .admin-source-chip {
   display: inline-flex;
   flex-direction: column;
   gap: 2px;
+  min-width: min(220px, 100%);
   max-width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-full);
-  background: var(--color-subtle);
+  border-radius: 10px;
+  background: var(--paper);
   color: var(--ink);
   text-decoration: none;
 }
+.admin-source-card:hover,
 .admin-source-chip:hover {
   background: #fff;
+  border-color: color-mix(in srgb, var(--ink) 22%, var(--line));
 }
 .admin-source-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--ink);
 }
 .admin-source-url {
   font-size: 13px;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 @media (max-width: 720px) {
@@ -3524,5 +3659,17 @@ code {
   }
   .listing-row {
     flex-direction: column;
+  }
+  .admin-queue-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .admin-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-actions .primary-button,
+  .admin-actions .secondary-button {
+    width: 100%;
   }
 }
