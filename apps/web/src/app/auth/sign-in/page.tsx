@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
@@ -13,6 +13,23 @@ function isValidEmail(value: string): boolean {
 
 type AuthMethod = "magic" | "password";
 type PasswordIntent = "sign-in" | "create";
+
+/** Map callback / OAuth redirect query params to a one-shot user-facing message. */
+function messageForAuthRedirect(
+  error: string | null,
+  description: string | null,
+): string | null {
+  if (!error) return null;
+  const desc = description?.replace(/\+/g, " ").trim();
+  if (desc) return desc;
+  if (error === "access_denied") {
+    return "Google sign-in was cancelled.";
+  }
+  if (error === "oauth" || error === "auth") {
+    return "Google sign-in didn't complete. Try again, or use email instead.";
+  }
+  return "Sign-in didn't complete. Try again, or use email instead.";
+}
 
 function GoogleMark() {
   return (
@@ -41,21 +58,35 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
-  const authError = searchParams.get("error");
+  const redirectError = searchParams.get("error");
+  const redirectDescription = searchParams.get("error_description");
   const configured = isSupabaseConfigured();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [method, setMethod] = useState<AuthMethod>("magic");
   const [passwordIntent, setPasswordIntent] = useState<PasswordIntent>("sign-in");
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(
-    authError === "auth" ? "Sign-in failed. Try again." : null,
+  // Show redirect errors only for this landing; strip them from the URL so reloads stay clean.
+  const [error, setError] = useState<string | null>(() =>
+    messageForAuthRedirect(redirectError, redirectDescription),
   );
   const [busy, setBusy] = useState(false);
   const emailOk = isValidEmail(email);
   const canSubmit =
     !busy && emailOk && (method === "magic" || password.length >= 6);
   const creating = method === "password" && passwordIntent === "create";
+
+  useEffect(() => {
+    if (!redirectError && !redirectDescription) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("error") && !url.searchParams.has("error_description")) {
+      return;
+    }
+    url.searchParams.delete("error");
+    url.searchParams.delete("error_description");
+    const clean = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", clean);
+  }, [redirectError, redirectDescription]);
 
   function switchMethod(nextMethod: AuthMethod) {
     setMethod(nextMethod);
