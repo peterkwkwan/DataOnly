@@ -302,11 +302,6 @@ export default function VerificationApplyPage() {
       {application ? (
         <div className="status-banner">
           <b>Status:</b> {application.status}
-          {application.status === "submitted" || application.status === "under_review" ? (
-            <p className="status-banner-note">
-              Your application is under processing. We will update your status after 5-7 business days.
-            </p>
-          ) : null}
           {application.infoRequestNote ? <p>Info requested: {application.infoRequestNote}</p> : null}
           {application.rejectionReason ? <p>Rejection: {application.rejectionReason}</p> : null}
         </div>
@@ -521,7 +516,13 @@ export default function VerificationApplyPage() {
         {message ? <p className="form-success">{message}</p> : null}
         <div className="form-actions">
           <button type="submit" className="primary-button" disabled={busy || locked || !canSubmit}>
-            {locked ? "Submitted" : busy ? "Submitting…" : "Submit application"}
+            {application?.status === "submitted" || application?.status === "under_review"
+              ? "Your application is currently under review. We will provide a status update within 5–7 business days."
+              : locked
+                ? "Submitted"
+                : busy
+                  ? "Submitting…"
+                  : "Submit application"}
           </button>
         </div>
       </form>
