@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { appOrigin, isStripeConfigured } from "@/lib/stripe/config";
-import { getStripe } from "@/lib/stripe/client";
+import {
+  createConnectAccountV2,
+  createConnectOnboardingLinkV2,
+} from "@/lib/stripe/connect";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
- * Creates (or reuses) a Stripe Express account for the signed-in creator
- * and returns an Account Link URL for onboarding / continuing KYC.
+ * Creates (or reuses) a Stripe Connect account via Accounts v2
+ * (recipient + Express Dashboard) and returns a v2 Account Link URL
+ * for hosted onboarding / continuing KYC.
  */
 export async function POST() {
   if (!isStripeConfigured()) {
@@ -16,7 +20,7 @@ export async function POST() {
           "Stripe is not configured. Set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY.",
         code: "stripe_not_configured",
         setupHint:
-          "Open Stripe Dashboard → Connect → Get started (Express). Then add keys to apps/web/.env.local.",
+          "Open Stripe Dashboard → Connect (marketplace / destination charges). Then add keys to apps/web/.env.local.",
       },
       { status: 503 },
     );
@@ -50,55 +54,57 @@ export async function POST() {
     return NextResponse.json({ error: rowError.message }, { status: 500 });
   }
 
-  const stripe = getStripe();
   let accountId = row.stripe_account_id as string | null;
 
   if (!accountId) {
-    const account = await stripe.accounts.create({
-      type: "express",
-      email: user.email ?? undefined,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      business_profile: {
-        name: creator.name,
-        product_description: "DataOnly datacut marketplace creator",
-      },
-      metadata: {
-        creator_id: creator.id,
-        user_id: user.id,
-      },
-    });
-    accountId = account.id;
-    const { error: updateError } = await supabase
-      .from("creators")
-      .update({
-        stripe_account_id: accountId,
-        stripe_charges_enabled: !!account.charges_enabled,
-        stripe_details_submitted: !!account.details_submitted,
-        stripe_onboarding_complete: !!(account.charges_enabled && account.details_submitted),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", creator.id);
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    try {
+      const created = await createConnectAccountV2({
+        email: user.email,
+        displayName: creator.name,
+        metadata: {
+          creator_id: creator.id,
+          user_id: user.id,
+        },
+      });
+      accountId = created.accountId;
+      const { error: updateError } = await supabase
+        .from("creators")
+        .update({
+          stripe_account_id: accountId,
+          stripe_charges_enabled: created.flags.chargesEnabled,
+          stripe_details_submitted: created.flags.detailsSubmitted,
+          stripe_onboarding_complete: created.flags.onboardingComplete,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", creator.id);
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create Connect account";
+      console.error("[stripe connect onboard] create", message);
+      return NextResponse.json({ error: message }, { status: 502 });
     }
   }
 
   const origin = appOrigin();
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${origin}/dashboard?connect=refresh`,
-    return_url: `${origin}/dashboard?connect=return`,
-    type: "account_onboarding",
-  });
+  try {
+    const link = await createConnectOnboardingLinkV2({
+      accountId,
+      refreshUrl: `${origin}/dashboard?connect=refresh`,
+      returnUrl: `${origin}/dashboard?connect=return`,
+    });
 
-  return NextResponse.json({
-    url: link.url,
-    accountId,
-    chargesEnabled: row.stripe_charges_enabled,
-    detailsSubmitted: row.stripe_details_submitted,
-    onboardingComplete: row.stripe_onboarding_complete,
-  });
+    return NextResponse.json({
+      url: link.url,
+      accountId,
+      chargesEnabled: row.stripe_charges_enabled,
+      detailsSubmitted: row.stripe_details_submitted,
+      onboardingComplete: row.stripe_onboarding_complete,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to create Account Link";
+    console.error("[stripe connect onboard] link", message);
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }

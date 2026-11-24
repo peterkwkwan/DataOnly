@@ -156,20 +156,24 @@ Creators must accept ToS at `/dashboard/tos` (web) or `/tos` (Expo) before dashb
 
 ## Stripe Connect purchase flow (Beta slice)
 
-Vertical slice: Express onboarding → Checkout with license summary → webhook entitlement → gated access stub.
+Vertical slice: Accounts v2 recipient onboarding (Express Dashboard) → Checkout with license summary → webhook entitlement → gated access stub.
+
+Connected accounts are created with `POST /v2/core/accounts` (recipient + `stripe_balance.stripe_transfers`) and onboarded via `POST /v2/core/account_links`. Checkout stays a destination charge + application fee on the platform.
 
 ### What Peter configures in Stripe Dashboard
 
 1. Create / open a [Stripe](https://dashboard.stripe.com) account (test mode first).
-2. **Connect** → enable Connect and choose **Express** accounts for creators.
-3. **Developers → API keys** — copy Publishable + Secret into `apps/web/.env.local` as:
+2. **Connect** → enable Connect for a **marketplace** (destination / indirect charges). Complete the platform questionnaire.
+3. Acknowledge **platform loss liability** (required when `losses_collector=application` for Express-dashboard recipients). Do **not** rely on Accounts v1 create — this app uses Accounts v2.
+4. **Developers → API keys** — copy Publishable + Secret into `apps/web/.env.local` as:
    - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
    - `STRIPE_SECRET_KEY`
-4. **Developers → Webhooks → Add endpoint**
+5. **Developers → Webhooks → Add endpoint**
    - URL: `https://YOUR_HOST/api/stripe/webhook` (for local: use [Stripe CLI](https://stripe.com/docs/stripe-cli) `stripe listen --forward-to localhost:3000/api/stripe/webhook`)
    - Events: `checkout.session.completed`, `account.updated`
    - Copy the signing secret → `STRIPE_WEBHOOK_SECRET`
-5. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set so the webhook can upsert `entitlements`.
+6. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set so the webhook can upsert `entitlements`.
+7. Optional: `STRIPE_CONNECT_DEFAULT_COUNTRY=us` (ISO alpha-2) for new connected accounts.
 
 ### SQL to run (if Alpha schema already applied)
 
@@ -232,10 +236,12 @@ grant select, insert, update, delete on public.entitlements to service_role;
 
 ### Flow (once keys + SQL are live)
 
-1. Creator signs in → `/dashboard` → **Set up payouts** (Express Account Link).
-2. Buyer opens `/datacuts/[slug]` → **Buy datacut** → license summary → Stripe Checkout (destination charge + platform fee).
-3. Webhook `checkout.session.completed` upserts `entitlements`.
-4. Buyer sees **Open access** (JSON stub until Storage delivery ships). Access is refused without an active entitlement.
+1. Set `NEXT_PUBLIC_APP_URL` to an **HTTPS** origin (Stripe v2 Account Links reject plain `http://localhost`).
+2. Creator signs in → `/dashboard` → **Set up payouts** (v2 Account Link → Express-hosted onboarding).
+3. After return, dashboard refreshes Connect flags (`stripe_transfers` active ⇒ checkout unlocked).
+4. Buyer opens `/datacuts/[slug]` → **Buy datacut** → license summary → Stripe Checkout (destination charge + platform fee).
+5. Webhook `checkout.session.completed` upserts `entitlements`.
+6. Buyer sees **Open access** (JSON stub until Storage delivery ships). Access is refused without an active entitlement.
 
 ### Still stubbed / not in this slice
 
@@ -258,7 +264,7 @@ Without Stripe keys, the UI and APIs return clear `stripe_not_configured` errors
 | Verification | Apply at `/dashboard/verification` (web) or `/verification` (Expo); admin queue at `/admin/verification`. Evidence = **Verified sources** (`sources` jsonb). |
 | Creator ToS | Gate at `/dashboard/tos` (web) and `/tos` (Expo) before listings / verification; stores `profiles.tos_accepted_at` + `tos_version`. Draft policy outline until counsel finalizes. |
 | Badge | `creators.verified` from DB after approve |
-| Purchase | Stripe Checkout + Connect Express; license summary before pay |
+| Purchase | Stripe Checkout + Connect Accounts v2 (recipient / Express); license summary before pay |
 | Entitlement | `entitlements` row from webhook; gates `/api/entitlements/access` |
 
 ## Scripts

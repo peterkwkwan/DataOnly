@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { isStripeConfigured } from "@/lib/stripe/config";
-import { getStripe } from "@/lib/stripe/client";
+import { retrieveConnectFlagsV2 } from "@/lib/stripe/connect";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-/** Refresh Connect account flags from Stripe after onboarding return. */
+/** Refresh Connect account flags from Stripe (Accounts v2) after onboarding return. */
 export async function POST() {
   const supabase = await createServerSupabaseClient();
   const {
@@ -39,34 +39,36 @@ export async function POST() {
     });
   }
 
-  const stripe = getStripe();
-  const account = await stripe.accounts.retrieve(creator.stripe_account_id);
-  const chargesEnabled = !!account.charges_enabled;
-  const detailsSubmitted = !!account.details_submitted;
-  const onboardingComplete = chargesEnabled && detailsSubmitted;
+  try {
+    const flags = await retrieveConnectFlagsV2(creator.stripe_account_id);
 
-  const { error: updateError } = await supabase
-    .from("creators")
-    .update({
-      stripe_charges_enabled: chargesEnabled,
-      stripe_details_submitted: detailsSubmitted,
-      stripe_onboarding_complete: onboardingComplete,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", creator.id);
+    const { error: updateError } = await supabase
+      .from("creators")
+      .update({
+        stripe_charges_enabled: flags.chargesEnabled,
+        stripe_details_submitted: flags.detailsSubmitted,
+        stripe_onboarding_complete: flags.onboardingComplete,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", creator.id);
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      configured: true,
+      accountId: creator.stripe_account_id,
+      chargesEnabled: flags.chargesEnabled,
+      detailsSubmitted: flags.detailsSubmitted,
+      onboardingComplete: flags.onboardingComplete,
+      refreshed: true,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to refresh Connect status";
+    console.error("[stripe connect status]", message);
+    return NextResponse.json({ error: message }, { status: 502 });
   }
-
-  return NextResponse.json({
-    configured: true,
-    accountId: creator.stripe_account_id,
-    chargesEnabled,
-    detailsSubmitted,
-    onboardingComplete,
-    refreshed: true,
-  });
 }
 
 export async function GET() {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/client";
+import { retrieveConnectFlagsV2 } from "@/lib/stripe/connect";
 import { getStripeWebhookSecret } from "@/lib/stripe/config";
 import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
@@ -58,17 +59,19 @@ async function upsertEntitlementFromSession(session: Stripe.Checkout.Session) {
   if (error) throw error;
 }
 
-async function syncConnectAccount(account: Stripe.Account) {
+/** Sync creators.stripe_* from Accounts v2 (recipient stripe_transfers). */
+async function syncConnectAccountById(accountId: string) {
+  const flags = await retrieveConnectFlagsV2(accountId);
   const admin = createServiceSupabaseClient();
   const { error } = await admin
     .from("creators")
     .update({
-      stripe_charges_enabled: !!account.charges_enabled,
-      stripe_details_submitted: !!account.details_submitted,
-      stripe_onboarding_complete: !!(account.charges_enabled && account.details_submitted),
+      stripe_charges_enabled: flags.chargesEnabled,
+      stripe_details_submitted: flags.detailsSubmitted,
+      stripe_onboarding_complete: flags.onboardingComplete,
       updated_at: new Date().toISOString(),
     })
-    .eq("stripe_account_id", account.id);
+    .eq("stripe_account_id", accountId);
   if (error) throw error;
 }
 
@@ -114,7 +117,7 @@ export async function POST(request: Request) {
       }
       case "account.updated": {
         const account = event.data.object as Stripe.Account;
-        await syncConnectAccount(account);
+        await syncConnectAccountById(account.id);
         break;
       }
       default:
