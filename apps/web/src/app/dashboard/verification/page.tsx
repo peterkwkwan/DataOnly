@@ -8,7 +8,13 @@ import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Creator, VerificationApplication, VerifiedSource, VerifiedSourcePlatform } from "@dataonly/core";
+import type {
+  Creator,
+  VerificationApplication,
+  VerificationStatus,
+  VerifiedSource,
+  VerifiedSourcePlatform,
+} from "@dataonly/core";
 import {
   EXTRA_INDUSTRIES,
   emptyVerifiedSourceRow,
@@ -20,6 +26,10 @@ import {
 } from "@dataonly/core";
 
 const INDUSTRY_OPTIONS = [...EXTRA_INDUSTRIES];
+
+function statusPillClass(status: VerificationStatus): string {
+  return `status-pill status-pill--${status}`;
+}
 
 export default function VerificationApplyPage() {
   const { user, profile, loading } = useAuth();
@@ -301,7 +311,10 @@ export default function VerificationApplyPage() {
 
       {application ? (
         <div className="status-banner">
-          <b>Status:</b> {application.status.toUpperCase()}
+          <b>Status:</b>
+          <span className={statusPillClass(application.status)}>
+            {application.status.toUpperCase()}
+          </span>
           {application.infoRequestNote ? <p>Info requested: {application.infoRequestNote}</p> : null}
           {application.rejectionReason ? <p>Rejection: {application.rejectionReason}</p> : null}
         </div>

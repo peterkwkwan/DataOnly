@@ -8,16 +8,24 @@ import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Creator, Datacut, VerificationApplication } from "@dataonly/core";
+import type { Creator, Datacut, VerificationApplication, VerificationStatus } from "@dataonly/core";
 import { mapDatacut, mapVerification, type DatacutRow, type VerificationRow } from "@dataonly/core";
 
-function verificationStatusLabel(
+function verificationStatusPill(
   creator: Creator | null,
   application: VerificationApplication | null,
-): string {
-  if (creator?.verified) return "Verified";
-  if (application?.status) return application.status;
-  return "Not applied";
+): { label: string; status: VerificationStatus | "not_applied" | "verified" } {
+  if (creator?.verified) return { label: "VERIFIED", status: "verified" };
+  if (application?.status) {
+    return { label: application.status.toUpperCase(), status: application.status };
+  }
+  return { label: "NOT APPLIED", status: "not_applied" };
+}
+
+function statusPillClass(status: VerificationStatus | "not_applied" | "verified"): string {
+  if (status === "verified") return "status-pill status-pill--approved";
+  if (status === "not_applied") return "status-pill status-pill--draft";
+  return `status-pill status-pill--${status}`;
 }
 
 export default function DashboardPage() {
@@ -163,6 +171,8 @@ export default function DashboardPage() {
     );
   }
 
+  const verificationPill = verificationStatusPill(creator, verification);
+
   return (
     <section className="page-view dashboard-view">
       <div className="page-intro">
@@ -244,12 +254,13 @@ export default function DashboardPage() {
           ) : null}
         </div>
         <p className="dashboard-verification-status">
-          <b>Status:</b> {verificationStatusLabel(creator, verification)}
+          <b>Status:</b>
+          <span className={statusPillClass(verificationPill.status)}>{verificationPill.label}</span>
           {verification?.infoRequestNote ? (
-            <span> Info requested: {verification.infoRequestNote}</span>
+            <span>Info requested: {verification.infoRequestNote}</span>
           ) : null}
           {verification?.rejectionReason ? (
-            <span> Rejection: {verification.rejectionReason}</span>
+            <span>Rejection: {verification.rejectionReason}</span>
           ) : null}
         </p>
       </section>

@@ -3270,6 +3270,10 @@ footer button {
   margin: 0 0 12px;
 }
 .dashboard-verification-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -3532,6 +3536,8 @@ footer button {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--ink);
   background: var(--color-subtle);
 }
@@ -3559,11 +3565,19 @@ footer button {
 }
 .status-banner {
   /* page-view already pads 5vw */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
   margin: 0 0 20px;
   padding: 14px 18px;
   border-radius: var(--radius-md);
   background: var(--subtle, #f0f1eb);
   border: 1px solid var(--line);
+}
+.status-banner > p {
+  flex: 1 1 100%;
+  margin: 0;
 }
 .chip-fieldset {
   border: 1px solid var(--line);
