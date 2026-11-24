@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Verified } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
@@ -127,17 +127,16 @@ export default function VerificationApplyPage() {
     });
   }
 
+  const canSubmit = useMemo(() => {
+    if (!identity.trim()) return false;
+    if (industries.length === 0) return false;
+    if (!attested) return false;
+    return validateVerifiedSources(sources).ok;
+  }, [identity, industries, sources, attested]);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!creator || !user) return;
-    if (!attested) {
-      setError("Attestation is required.");
-      return;
-    }
-    if (industries.length === 0) {
-      setError("Select at least one industry.");
-      return;
-    }
+    if (!creator || !user || !canSubmit || busy) return;
     const sourcesResult = validateVerifiedSources(sources);
     if (!sourcesResult.ok) {
       setError(sourcesResult.error);
@@ -310,13 +309,13 @@ export default function VerificationApplyPage() {
 
       <form className="auth-card listing-form" onSubmit={onSubmit}>
         <label>
-          Legal / display identity
+          Legal / display identity *
           <input required value={identity} onChange={(e) => setIdentity(e.target.value)} disabled={locked} />
         </label>
 
         <div className="industry-field" ref={industriesRef}>
           <span className="industry-field-label" id={industriesFieldId}>
-            Industries / expertise
+            Industries / expertise *
           </span>
           <button
             type="button"
@@ -390,7 +389,7 @@ export default function VerificationApplyPage() {
 
         <div className="verified-sources-field" ref={sourcesRef}>
           <span className="industry-field-label" id={sourcesFieldId}>
-            Verified sources
+            Verified sources *
           </span>
           <p className="verified-sources-hint">
             Add YouTube or LinkedIn links that show your expertise. Same platform can be used more than once.
@@ -509,13 +508,14 @@ export default function VerificationApplyPage() {
             checked={attested}
             onChange={(e) => setAttested(e.target.checked)}
             disabled={locked}
+            required
           />
-          I attest that this information is true and that I own or have rights to the claims made.
+          I attest that this information is true and that I own or have rights to the claims made. *
         </label>
         {error ? <p className="form-error">{error}</p> : null}
         {message ? <p className="form-success">{message}</p> : null}
         <div className="form-actions">
-          <button type="submit" className="primary-button" disabled={busy || locked || industries.length === 0}>
+          <button type="submit" className="primary-button" disabled={busy || locked || !canSubmit}>
             {locked ? "Submitted" : busy ? "Submitting…" : "Submit application"}
           </button>
         </div>
