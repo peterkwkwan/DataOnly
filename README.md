@@ -35,7 +35,7 @@ npm run dev:web
 
 With **no** Supabase env vars, the app uses `packages/core` mock data (same as Phase 1).
 
-Routes: `/` Home · `/explore` · `/creators` · `/datacuts/[slug]` · `/saved` · `/search` · `/auth/sign-in` · `/dashboard` · `/admin/verification`
+Routes: `/` Home · `/explore` · `/creators` · `/datacuts/[slug]` · `/saved` · `/search` · `/auth/sign-in` · `/dashboard` · `/dashboard/tos` · `/admin/verification`
 
 ## Run mobile
 
@@ -55,6 +55,7 @@ Do this in the [Supabase dashboard](https://supabase.com/dashboard) — this rep
    - `supabase/migrations/20260311000001_rls.sql` (RLS policies + table GRANTs)
    - `supabase/migrations/20260311000002_grants.sql` (idempotent GRANTs; required if you ran an older rls without privileges)
    - `supabase/migrations/20260312000000_verification_sources.sql` (adds `sources jsonb` if you already ran init before this column existed)
+   - `supabase/migrations/20260313000000_creator_tos.sql` (adds `profiles.tos_accepted_at` + `profiles.tos_version` for Creator ToS acceptance)
    - `supabase/seed.sql` (categories / creators / datacuts from mock)
 
    **Already ran init + rls once?** Paste this in SQL Editor (same as `20260311000002_grants.sql`) — do not re-run full init:
@@ -129,8 +130,18 @@ npm run seed:help
 
 - Supabase project
 - Email auth enabled + localhost redirect URL
-- Schema via the SQL migrations above (init → rls → grants → seed)
+- Schema via the SQL migrations above (init → rls → grants → verification sources → creator ToS → seed)
 - (After first login) `profiles.role = 'admin'` for review queue access
+
+**Already on Alpha schema and need Creator ToS only?** Run this in SQL Editor (same as `20260313000000_creator_tos.sql`):
+
+```sql
+alter table public.profiles
+  add column if not exists tos_accepted_at timestamptz,
+  add column if not exists tos_version text;
+```
+
+Creators must accept ToS at `/dashboard/tos` (web) or `/tos` (Expo) before dashboard listings / verification. Acceptance is stored on `profiles` (`tos_accepted_at`, `tos_version`). Bumping `CREATOR_TOS_VERSION` in `@dataonly/core` forces re-accept.
 
 Out of scope for this Alpha pass: Stripe, real payouts, file upload beyond listing metadata.
 
@@ -143,6 +154,7 @@ Out of scope for this Alpha pass: Stripe, real payouts, file upload beyond listi
 | Creator CRUD | `/dashboard` draft + publish listings |
 | Saved | `localStorage` when logged out; `saved` table when logged in |
 | Verification | Apply at `/dashboard/verification` (web) or `/verification` (Expo); admin queue at `/admin/verification`. Evidence = **Verified sources** (`sources` jsonb). |
+| Creator ToS | Gate at `/dashboard/tos` (web) and `/tos` (Expo) before listings / verification; stores `profiles.tos_accepted_at` + `tos_version`. Draft policy outline until counsel finalizes. |
 | Badge | `creators.verified` from DB after approve |
 
 ## Scripts

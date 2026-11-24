@@ -20,6 +20,7 @@ console.log(`DataOnly seed helper
    - supabase/migrations/20260311000001_rls.sql
    - supabase/migrations/20260311000002_grants.sql  (or paste if you already ran older init+rls)
    - supabase/migrations/20260312000000_verification_sources.sql  (if DB already had init without sources)
+   - supabase/migrations/20260313000000_creator_tos.sql  (profiles.tos_accepted_at + tos_version)
    - supabase/seed.sql
 3. Auth → URL configuration: add http://localhost:3000/auth/callback
 4. Copy Project URL + publishable key into apps/web/.env.local:

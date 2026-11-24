@@ -77,6 +77,8 @@ export type ProfileRow = {
   display_name: string | null;
   email: string | null;
   role: string;
+  tos_accepted_at?: string | null;
+  tos_version?: string | null;
   created_at: string;
 };
 
@@ -183,6 +185,8 @@ export function mapProfile(row: ProfileRow): Profile {
     displayName: row.display_name,
     email: row.email,
     role: (row.role as ProfileRole) || "user",
+    tosAcceptedAt: row.tos_accepted_at ?? null,
+    tosVersion: row.tos_version ?? null,
     createdAt: row.created_at,
   };
 }

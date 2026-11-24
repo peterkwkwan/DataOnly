@@ -3279,6 +3279,43 @@ footer button {
   color: var(--ink);
   font-weight: 650;
 }
+.tos-draft-banner {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--lime) 18%, #fff);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+.tos-sections {
+  margin: 18px 0 28px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 16px;
+}
+.tos-sections li {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+.tos-sections h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+.tos-sections p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.tos-form {
+  max-width: 640px;
+}
 .listing-table {
   display: grid;
   gap: 12px;

@@ -7,6 +7,8 @@ create table if not exists public.profiles (
   display_name text,
   email text,
   role text not null default 'user' check (role in ('user', 'creator', 'admin')),
+  tos_accepted_at timestamptz,
+  tos_version text,
   created_at timestamptz not null default now()
 );
 

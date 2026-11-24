@@ -2,6 +2,7 @@ import {
   EXTRA_INDUSTRIES,
   emptyVerifiedSourceRow,
   ensureCreatorForUser,
+  hasAcceptedCreatorTos,
   mapVerification,
   validateVerifiedSources,
   verifiedSourcePlatformLabel,
@@ -56,6 +57,10 @@ export default function VerificationApplyScreen() {
       router.replace({ pathname: "/auth/sign-in", params: { next: "/verification" } });
       return;
     }
+    if (!hasAcceptedCreatorTos(profile)) {
+      router.replace({ pathname: "/tos", params: { next: "/verification" } });
+      return;
+    }
     let cancelled = false;
     async function load() {
       try {
@@ -87,7 +92,7 @@ export default function VerificationApplyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [configured, loading, profile?.displayName, user]);
+  }, [configured, loading, profile, user]);
 
   const locked =
     application?.status === "submitted" ||
@@ -191,12 +196,16 @@ export default function VerificationApplyScreen() {
     );
   }
 
-  if (loading || (!user && configured)) {
+  if (loading || (!user && configured) || (user && !hasAcceptedCreatorTos(profile))) {
     return (
       <Screen>
         <SafeAreaView edges={["top"]} style={styles.safe}>
           <View style={styles.pad}>
-            <Text style={styles.body}>Loading…</Text>
+            <Text style={styles.body}>
+              {user && !hasAcceptedCreatorTos(profile)
+                ? "Redirecting to Creator Terms…"
+                : "Loading…"}
+            </Text>
           </View>
         </SafeAreaView>
       </Screen>

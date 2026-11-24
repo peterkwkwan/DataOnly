@@ -58,3 +58,12 @@ export {
 } from "./verified-sources";
 export type { VerifiedSourcesValidation } from "./verified-sources";
 export { ensureCreatorForUser } from "./supabase/creator";
+export {
+  CREATOR_TOS_ACCEPT_LABEL,
+  CREATOR_TOS_DRAFT_NOTICE,
+  CREATOR_TOS_SECTIONS,
+  CREATOR_TOS_VERSION,
+  acceptCreatorTos,
+  hasAcceptedCreatorTos,
+} from "./creator-tos";
+export type { CreatorTosSection } from "./creator-tos";

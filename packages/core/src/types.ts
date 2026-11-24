@@ -91,6 +91,10 @@ export interface Profile {
   displayName: string | null;
   email: string | null;
   role: ProfileRole;
+  /** ISO timestamp when current Creator ToS was accepted; null until first accept. */
+  tosAcceptedAt: string | null;
+  /** Version string pinned at acceptance; re-accept when it differs from CREATOR_TOS_VERSION. */
+  tosVersion: string | null;
   createdAt: string;
 }
 

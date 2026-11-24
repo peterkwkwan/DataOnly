@@ -40,6 +40,10 @@ export default function RootLayout() {
           <Stack.Screen name="creators/[slug]" options={{ title: "Creator", headerBackTitle: "Back" }} />
           <Stack.Screen name="explore/[slug]" options={{ title: "Explore", headerBackTitle: "Back" }} />
           <Stack.Screen
+            name="tos"
+            options={{ title: "Creator Terms", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
             name="verification"
             options={{ title: "Verification", headerBackTitle: "Back" }}
           />
