@@ -33,10 +33,12 @@ export function DatacutDetailClient({
   cut,
   creatorSlug,
   creatorVerified,
+  creatorUserId,
 }: {
   cut: Datacut;
   creatorSlug?: string;
   creatorVerified: boolean;
+  creatorUserId?: string | null;
 }) {
   const { isSaved, toggleSaved } = useSaved();
   const { user, configured, loading: authLoading } = useAuth();
@@ -50,6 +52,7 @@ export function DatacutDetailClient({
   const [banner, setBanner] = useState<string | null>(null);
   const saved = isSaved(cut.id);
   const verified = creatorVerified || !!cut.creatorVerified;
+  const isOwner = !!user && !!creatorUserId && user.id === creatorUserId;
 
   const refreshEntitlement = useCallback(async () => {
     if (!configured || !user) {
@@ -186,7 +189,11 @@ export function DatacutDetailClient({
         {banner ? <p className="empty-hint">{banner}</p> : null}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {entitled ? (
+          {isOwner ? (
+            <Link className="primary-button" href={`/dashboard/listings/${cut.id}`}>
+              Edit listing <Icon name="arrow" size={16} />
+            </Link>
+          ) : entitled ? (
             <button
               type="button"
               className="primary-button"

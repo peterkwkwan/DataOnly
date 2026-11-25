@@ -38,6 +38,7 @@ export default async function DatacutDetailPage({ params }: Props) {
           cut={cut}
           creatorSlug={creator?.slug}
           creatorVerified={!!creator?.verified}
+          creatorUserId={creator?.userId}
         />
       </Suspense>
       <p className="empty-hint" style={{ padding: "0 5vw 60px" }}>
