@@ -101,6 +101,10 @@ export interface Datacut {
   description: string;
   /** Public catalog only includes published; owners see drafts in dashboard */
   status?: ListingStatus;
+  /** Private Storage object path when a file is attached (owners / access API). */
+  storagePath?: string | null;
+  /** Original filename for entitled downloads. */
+  fileName?: string | null;
 }
 
 export interface AutocompleteSuggestion {

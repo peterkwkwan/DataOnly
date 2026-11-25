@@ -4,11 +4,14 @@ import {
   type EntitlementRow,
 } from "@dataonly/core";
 import { NextResponse } from "next/server";
+import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { DATACUT_STORAGE_BUCKET, SIGNED_URL_EXPIRES_SEC } from "@/lib/storage";
 
 /**
- * Gated access for a purchased datacut.
- * MVP: returns a JSON access stub (no Storage file yet). Real file URLs land later.
+ * Gated download for a purchased datacut.
+ * Requires an active entitlement for the signed-in user, then mints a short-lived
+ * Supabase Storage signed URL (service role) for the private object.
  */
 export async function GET(request: Request) {
   if (!isSupabaseConfigured()) {
@@ -49,7 +52,9 @@ export async function GET(request: Request) {
 
   const { data: cut, error: cutError } = await supabase
     .from("datacuts")
-    .select("id, slug, title, format, size, records, license, description, creators(name)")
+    .select(
+      "id, slug, title, format, size, records, license, description, storage_path, file_name, creators(name)",
+    )
     .eq("id", datacutId)
     .maybeSingle();
 
@@ -63,11 +68,82 @@ export async function GET(request: Request) {
     ? creatorRel[0]?.name
     : (creatorRel as { name?: string } | null)?.name;
 
+  const storagePath = typeof cut.storage_path === "string" ? cut.storage_path.trim() : "";
+  const fileName =
+    (typeof cut.file_name === "string" && cut.file_name.trim()) ||
+    storagePath.split("/").pop() ||
+    "download";
+
+  if (!storagePath) {
+    return NextResponse.json(
+      {
+        error: "This datacut has no downloadable file yet",
+        code: "file_missing",
+        access: "granted",
+        delivery: {
+          mode: "unavailable",
+          note: "Entitlement is active, but the creator has not uploaded a file.",
+          format: cut.format,
+          size: cut.size,
+          records: cut.records,
+        },
+        datacut: {
+          id: cut.id,
+          slug: cut.slug,
+          title: cut.title,
+          creatorName: creatorName ?? null,
+          description: cut.description,
+        },
+        license: {
+          template: entitlement.license,
+          version: entitlement.licenseVersion,
+          summary: LICENSE_SUMMARIES[entitlement.license],
+        },
+        entitlement: {
+          id: entitlement.id,
+          purchasedAt: entitlement.createdAt,
+          amountCents: entitlement.amountCents,
+          currency: entitlement.currency,
+        },
+      },
+      { status: 404 },
+    );
+  }
+
+  if (!hasServiceRoleKey()) {
+    return NextResponse.json(
+      {
+        error: "Storage signing requires SUPABASE_SERVICE_ROLE_KEY",
+        code: "storage_not_configured",
+      },
+      { status: 503 },
+    );
+  }
+
+  const admin = createServiceSupabaseClient();
+  const { data: signed, error: signError } = await admin.storage
+    .from(DATACUT_STORAGE_BUCKET)
+    .createSignedUrl(storagePath, SIGNED_URL_EXPIRES_SEC, {
+      download: fileName,
+    });
+
+  if (signError || !signed?.signedUrl) {
+    return NextResponse.json(
+      {
+        error: signError?.message ?? "Could not create download URL",
+        code: "sign_failed",
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     access: "granted",
     delivery: {
-      mode: "stub",
-      note: "File Storage delivery is not wired yet. Entitlement gate is live — replace this stub with a signed Storage URL.",
+      mode: "signed_url",
+      url: signed.signedUrl,
+      expiresIn: SIGNED_URL_EXPIRES_SEC,
+      fileName,
       format: cut.format,
       size: cut.size,
       records: cut.records,

@@ -161,7 +161,7 @@ Creators must accept ToS at `/dashboard/tos` (web) or `/tos` (Expo) before dashb
 
 ## Stripe Connect purchase flow (Beta slice)
 
-Vertical slice: Accounts v2 recipient onboarding (Express Dashboard) → Checkout with license summary → webhook entitlement → gated access stub.
+Vertical slice: Accounts v2 recipient onboarding (Express Dashboard) → Checkout with license summary → webhook entitlement → gated Storage download (signed URL).
 
 Connected accounts are created with `POST /v2/core/accounts` (recipient + `stripe_balance.stripe_transfers`) and onboarded via `POST /v2/core/account_links`. Checkout stays a destination charge + application fee on the platform.
 
@@ -286,11 +286,15 @@ grant select, insert, update, delete on public.entitlements to service_role;
 3. After return, dashboard refreshes Connect flags (`stripe_transfers` active ⇒ checkout unlocked).
 4. Buyer opens `/datacuts/[slug]` → **Buy datacut** → license summary → Stripe Checkout (destination charge + platform fee).
 5. Webhook `checkout.session.completed` (service_role) upserts `entitlements`. Success URL also calls `POST /api/stripe/confirm` with `session_id` so a missed webhook still grants access.
-6. Buyer sees **Open access** (JSON stub until Storage delivery ships). Access is refused without an active entitlement.
+6. Buyer sees **Download** when entitled. `/api/entitlements/access` checks an active entitlement, then mints a short-lived signed URL from the private `datacuts` Storage bucket. Access is refused without an active entitlement.
+7. Creators attach files on the listing form (or upload via Dashboard + set `storage_path`). Bucket / policy setup notes live with the project docs (`entitled-downloads`).
+
+### SQL for Storage delivery
+
+Paste `supabase/migrations/20260315000000_datacut_storage.sql` in the Supabase SQL Editor after the entitlements migration. It adds `datacuts.storage_path` / `file_name`, creates the private `datacuts` bucket, and owner-only Storage RLS.
 
 ### Still stubbed / not in this slice
 
-- Real file download from Supabase Storage (access API returns a gated JSON stub).
 - Creator payouts analytics / balance dashboard beyond Connect status.
 - Mobile Checkout (Expo still shows mock buy).
 - Refund / dispute UI; platform fee % still an open product decision (env default 10%).
@@ -311,6 +315,7 @@ Without Stripe keys, the UI and APIs return clear `stripe_not_configured` errors
 | Badge | `creators.verified` from DB after approve |
 | Purchase | Stripe Checkout + Connect Accounts v2 (recipient / Express); license summary before pay |
 | Entitlement | `entitlements` row from webhook; gates `/api/entitlements/access` |
+| Download | Private `datacuts` Storage bucket; signed URL after entitlement check |
 
 ## Scripts
 

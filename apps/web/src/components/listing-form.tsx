@@ -15,6 +15,7 @@ import type { Category, Datacut, LicenseTemplate, ListingStatus } from "@dataonl
 import { licenseBlurb } from "@dataonly/core";
 import { Icon } from "@/components/icons";
 import { formatClientError } from "@/lib/errors";
+import { buildDatacutObjectPath, DATACUT_STORAGE_BUCKET, sanitizeFileName } from "@/lib/storage";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 /** Approved formats; labels match existing `datacuts.format` text values. */
@@ -67,6 +68,8 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
   const [status, setStatus] = useState<ListingStatus>(initial?.status ?? "draft");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [attachedName, setAttachedName] = useState(initial?.fileName ?? null);
   const [formatOpen, setFormatOpen] = useState(false);
   const [activeOption, setActiveOption] = useState(() =>
     Math.max(0, FORMAT_OPTIONS.indexOf(normalizeFormat(initial?.format))),
@@ -170,6 +173,7 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         updated_at: new Date().toISOString(),
       };
 
+      let datacutId = initial?.id;
       if (initial) {
         const { error: updateError } = await supabase
           .from("datacuts")
@@ -177,9 +181,35 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
           .eq("id", initial.id);
         if (updateError) throw updateError;
       } else {
-        const { error: insertError } = await supabase.from("datacuts").insert(payload);
+        const { data: inserted, error: insertError } = await supabase
+          .from("datacuts")
+          .insert(payload)
+          .select("id")
+          .single();
         if (insertError) throw insertError;
+        datacutId = Number(inserted.id);
       }
+
+      if (file && datacutId) {
+        const objectPath = buildDatacutObjectPath(creatorId, datacutId, file.name);
+        const { error: uploadError } = await supabase.storage
+          .from(DATACUT_STORAGE_BUCKET)
+          .upload(objectPath, file, { upsert: true, contentType: file.type || undefined });
+        if (uploadError) throw uploadError;
+
+        const fileName = sanitizeFileName(file.name);
+        const { error: pathError } = await supabase
+          .from("datacuts")
+          .update({
+            storage_path: objectPath,
+            file_name: fileName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", datacutId);
+        if (pathError) throw pathError;
+        setAttachedName(fileName);
+      }
+
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
@@ -316,6 +346,20 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
           <option value="published">Published</option>
         </select>
       </label>
+      <label>
+        Dataset file
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      <p className="form-footnote">
+        {file
+          ? `Will upload: ${file.name}`
+          : attachedName
+            ? `Attached: ${attachedName}`
+            : "Optional — buyers can download only after purchase once a file is attached. Stored in the private datacuts bucket."}
+      </p>
       {error ? <p className="form-error">{error}</p> : null}
       <div className="form-actions">
         <button type="submit" className="primary-button" disabled={busy || !canSave}>

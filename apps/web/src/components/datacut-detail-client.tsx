@@ -12,7 +12,16 @@ import { useSaved } from "@/context/saved-context";
 
 type AccessPayload = {
   access: string;
-  delivery: { mode: string; note: string; format: string; size: string; records: string };
+  delivery: {
+    mode: string;
+    note?: string;
+    url?: string;
+    expiresIn?: number;
+    fileName?: string;
+    format: string;
+    size: string;
+    records: string;
+  };
   license: {
     template: string;
     version: string;
@@ -114,20 +123,31 @@ export function DatacutDetailClient({
     };
   }, [configured, refreshEntitlement, searchParams, user]);
 
-  async function openAccess() {
+  async function downloadFile() {
     setAccessError(null);
     setAccessBusy(true);
     try {
       const res = await fetch(`/api/entitlements/access?datacutId=${cut.id}`);
-      const data = await res.json();
+      const data = (await res.json()) as AccessPayload & { error?: string };
       if (!res.ok) {
-        setAccessError(data.error ?? "Access denied");
-        setAccess(null);
+        setAccessError(data.error ?? "Download denied");
+        setAccess(data.access === "granted" ? data : null);
         return;
       }
-      setAccess(data as AccessPayload);
+      setAccess(data);
+      if (data.delivery.mode === "signed_url" && data.delivery.url) {
+        const anchor = document.createElement("a");
+        anchor.href = data.delivery.url;
+        anchor.rel = "noopener";
+        anchor.download = data.delivery.fileName || "download";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } else {
+        setAccessError(data.delivery.note ?? "No downloadable file yet");
+      }
     } catch (err) {
-      setAccessError(err instanceof Error ? err.message : "Access failed");
+      setAccessError(err instanceof Error ? err.message : "Download failed");
     } finally {
       setAccessBusy(false);
     }
@@ -171,9 +191,9 @@ export function DatacutDetailClient({
               type="button"
               className="primary-button"
               disabled={accessBusy}
-              onClick={() => void openAccess()}
+              onClick={() => void downloadFile()}
             >
-              {accessBusy ? "Opening…" : "Open access"} <Icon name="arrow" size={16} />
+              {accessBusy ? "Preparing…" : "Download"} <Icon name="arrow" size={16} />
             </button>
           ) : (
             <button
@@ -207,11 +227,22 @@ export function DatacutDetailClient({
         {accessError ? <p className="form-error">{accessError}</p> : null}
         {access ? (
           <div className="buy-license" style={{ marginTop: 16 }}>
-            <b>Access granted · {access.license.summary.title}</b>
-            <p style={{ margin: "8px 0 0" }}>{access.delivery.note}</p>
+            <b>
+              {access.delivery.mode === "signed_url" ? "Download started" : "Access granted"} ·{" "}
+              {access.license.summary.title}
+            </b>
+            {access.delivery.fileName ? (
+              <p style={{ margin: "8px 0 0" }}>File: {access.delivery.fileName}</p>
+            ) : null}
+            {access.delivery.note ? (
+              <p style={{ margin: "8px 0 0" }}>{access.delivery.note}</p>
+            ) : null}
             <p style={{ margin: "6px 0 0" }}>
               Format {access.delivery.format} · {access.delivery.size} · {access.delivery.records}{" "}
               records · license {access.license.version}
+              {access.delivery.expiresIn
+                ? ` · link expires in ${access.delivery.expiresIn}s`
+                : ""}
             </p>
           </div>
         ) : null}
