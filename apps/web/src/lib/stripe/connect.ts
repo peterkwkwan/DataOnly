@@ -5,6 +5,8 @@ export type ConnectAccountFlags = {
   chargesEnabled: boolean;
   detailsSubmitted: boolean;
   onboardingComplete: boolean;
+  /** True when Stripe has past_due requirement entries (action required). */
+  requirementsPastDue: boolean;
 };
 
 /** Default connected-account country (ISO 3166-1 alpha-2, lowercase). */
@@ -26,6 +28,9 @@ export function flagsFromV2Account(account: Stripe.V2.Core.Account): ConnectAcco
   const chargesEnabled = transfersStatus === "active";
 
   const entries = account.requirements?.entries ?? [];
+  const requirementsPastDue = entries.some(
+    (entry) => entry.minimum_deadline?.status === "past_due",
+  );
   const hasBlockingRequirement = entries.some((entry) => {
     const status = entry.minimum_deadline?.status;
     return status === "currently_due" || status === "past_due";
@@ -34,7 +39,7 @@ export function flagsFromV2Account(account: Stripe.V2.Core.Account): ConnectAcco
   const detailsSubmitted = !hasBlockingRequirement || chargesEnabled;
   const onboardingComplete = chargesEnabled && detailsSubmitted;
 
-  return { chargesEnabled, detailsSubmitted, onboardingComplete };
+  return { chargesEnabled, detailsSubmitted, onboardingComplete, requirementsPastDue };
 }
 
 /** Create a marketplace account (destination charges + Express Dashboard). */

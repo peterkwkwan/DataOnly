@@ -35,6 +35,7 @@ export async function POST() {
       chargesEnabled: !!creator.stripe_charges_enabled,
       detailsSubmitted: !!creator.stripe_details_submitted,
       onboardingComplete: !!creator.stripe_onboarding_complete,
+      requirementsPastDue: false,
       refreshed: false,
     });
   }
@@ -62,6 +63,7 @@ export async function POST() {
       chargesEnabled: flags.chargesEnabled,
       detailsSubmitted: flags.detailsSubmitted,
       onboardingComplete: flags.onboardingComplete,
+      requirementsPastDue: flags.requirementsPastDue,
       refreshed: true,
     });
   } catch (err) {
@@ -98,5 +100,6 @@ export async function GET() {
     chargesEnabled: !!creator?.stripe_charges_enabled,
     detailsSubmitted: !!creator?.stripe_details_submitted,
     onboardingComplete: !!creator?.stripe_onboarding_complete,
+    requirementsPastDue: false,
   });
 }

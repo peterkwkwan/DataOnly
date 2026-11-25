@@ -21,6 +21,23 @@ const VERIFICATION_PILL_LABELS: Record<VerificationStatus, string> = {
   revoked: "REVOKED",
 };
 
+type PayoutStatus =
+  | "unavailable"
+  | "not_started"
+  | "incomplete"
+  | "pending"
+  | "active"
+  | "needs_update";
+
+const PAYOUT_PILL_LABELS: Record<PayoutStatus, string> = {
+  unavailable: "UNAVAILABLE",
+  not_started: "NOT STARTED",
+  incomplete: "INCOMPLETE",
+  pending: "PENDING",
+  active: "ACTIVE",
+  needs_update: "NEEDS UPDATE",
+};
+
 const VIEW_APPLICATION_STATUSES = new Set<VerificationStatus>([
   "submitted",
   "under_review",
@@ -48,6 +65,55 @@ function statusPillClass(status: VerificationStatus | "not_applied" | "verified"
   return `status-pill status-pill--${status}`;
 }
 
+type ConnectState = {
+  configured: boolean;
+  accountId: string | null;
+  chargesEnabled: boolean;
+  detailsSubmitted: boolean;
+  onboardingComplete: boolean;
+  requirementsPastDue: boolean;
+};
+
+function payoutStatusFromConnect(connect: ConnectState): PayoutStatus {
+  if (!connect.configured) return "unavailable";
+  if (!connect.accountId) return "not_started";
+  // Past-due requirements beat "active" — creator must fix Stripe details.
+  if (connect.requirementsPastDue) return "needs_update";
+  if (connect.onboardingComplete) return "active";
+  // Details in, transfers not live yet — Stripe still reviewing.
+  if (connect.detailsSubmitted && !connect.chargesEnabled) return "pending";
+  // Account exists, onboarding unfinished / currently due.
+  return "incomplete";
+}
+
+function payoutStatusPill(connect: ConnectState | null): {
+  label: string;
+  status: PayoutStatus | "loading";
+  helper: string | null;
+} {
+  if (!connect) return { label: "…", status: "loading", helper: null };
+  const status = payoutStatusFromConnect(connect);
+  const helpers: Record<PayoutStatus, string> = {
+    unavailable: "Payouts aren't available right now.",
+    not_started: "Finish setup to receive payouts.",
+    incomplete: "Finish setup to receive payouts.",
+    pending: "Stripe is reviewing your payout details.",
+    active: "You can receive sales.",
+    needs_update: "Update your payout details to keep receiving sales.",
+  };
+  return { label: PAYOUT_PILL_LABELS[status], status, helper: helpers[status] };
+}
+
+function payoutStatusPillClass(status: PayoutStatus | "loading"): string {
+  if (status === "loading") return "status-pill status-pill--draft";
+  if (status === "unavailable") return "status-pill status-pill--rejected";
+  if (status === "not_started") return "status-pill status-pill--draft";
+  if (status === "incomplete") return "status-pill status-pill--submitted";
+  if (status === "pending") return "status-pill status-pill--under_review";
+  if (status === "active") return "status-pill status-pill--approved";
+  return "status-pill status-pill--needs_more_info";
+}
+
 export default function DashboardPage() {
   const { user, profile, loading, configured } = useAuth();
   const [creator, setCreator] = useState<Creator | null>(null);
@@ -58,13 +124,7 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
-  const [connect, setConnect] = useState<{
-    configured: boolean;
-    accountId: string | null;
-    chargesEnabled: boolean;
-    detailsSubmitted: boolean;
-    onboardingComplete: boolean;
-  } | null>(null);
+  const [connect, setConnect] = useState<ConnectState | null>(null);
 
   async function refreshConnectStatus(sync = false) {
     try {
@@ -79,6 +139,7 @@ export default function DashboardPage() {
         chargesEnabled: !!data.chargesEnabled,
         detailsSubmitted: !!data.detailsSubmitted,
         onboardingComplete: !!data.onboardingComplete,
+        requirementsPastDue: !!data.requirementsPastDue,
       });
     } catch (err) {
       setConnectMsg(formatClientError(err, "Could not load payout status"));
@@ -171,7 +232,8 @@ export default function DashboardPage() {
         }
         const params = new URLSearchParams(window.location.search);
         const connectParam = params.get("connect");
-        await refreshConnectStatus(connectParam === "return" || connectParam === "refresh");
+        // Always sync from Stripe so past-due → NEEDS UPDATE is accurate.
+        await refreshConnectStatus(true);
         if (!cancelled && connectParam === "return") {
           setConnectMsg("Payout settings updated.");
         } else if (!cancelled && connectParam === "refresh") {
@@ -260,6 +322,7 @@ export default function DashboardPage() {
   }
 
   const verificationPill = verificationStatusPill(creator, verification);
+  const payoutPill = payoutStatusPill(connect);
   const hideVerificationButton =
     !!creator?.verified || verification?.status === "approved";
   const verificationButtonLabel =
@@ -376,15 +439,10 @@ export default function DashboardPage() {
           </div>
         </div>
         <p className="dashboard-verification-status">
-          <b>Status:</b>{" "}
-          {!connect
-            ? "…"
-            : !connect.configured
-              ? "Payouts aren't available right now"
-              : connect.onboardingComplete
-                ? "Payouts active — you can receive sales"
-                : "Finish setup to receive payouts"}
+          <b>Status:</b>
+          <span className={payoutStatusPillClass(payoutPill.status)}>{payoutPill.label}</span>
         </p>
+        {payoutPill.helper ? <p className="empty-hint">{payoutPill.helper}</p> : null}
         {connectMsg ? <p className="empty-hint">{connectMsg}</p> : null}
         <p className="empty-hint">
           Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee.
