@@ -1,22 +1,46 @@
-import * as Linking from "expo-linking";
+import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 
 import { createMobileSupabaseClient } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
+/**
+ * Deep-link path after Google → Supabase. No leading slash: `Linking.createURL("/…")`
+ * emits `scheme:///path` (triple slash) in native builds, which Android Custom Tabs
+ * and Supabase allow-list matching often fail to treat as the same redirect.
+ */
+const AUTH_CALLBACK_PATH = "auth/sign-in";
+
 /** Deep-link back into the existing sign-in screen after Google → Supabase. */
 export function getAuthRedirectUrl() {
-  return Linking.createURL("/auth/sign-in");
+  return makeRedirectUri({
+    scheme: "dataonlymobile",
+    path: AUTH_CALLBACK_PATH,
+  });
+}
+
+/** Merge query + hash params (PKCE uses query; implicit may put tokens in the hash). */
+function getOAuthParams(url: string): Record<string, string> {
+  const parsed = new URL(url);
+  const params: Record<string, string> = {};
+  parsed.searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
+  if (parsed.hash) {
+    new URLSearchParams(parsed.hash.replace(/^#/, "")).forEach((value, key) => {
+      params[key] = value;
+    });
+  }
+  return params;
 }
 
 /**
  * Complete a Supabase OAuth / magic-link redirect.
- * PKCE returns `?code=`; older implicit redirects may include tokens in the query.
+ * PKCE returns `?code=`; older implicit redirects may include tokens in the hash/query.
  */
 export async function createSessionFromUrl(url: string): Promise<boolean> {
-  const parsed = Linking.parse(url);
-  const params = parsed.queryParams ?? {};
+  const params = getOAuthParams(url);
 
   const errorParam =
     typeof params.error === "string"
@@ -61,12 +85,23 @@ export async function createSessionFromUrl(url: string): Promise<boolean> {
 
 export async function signInWithGoogle(): Promise<{ cancelled: boolean }> {
   const redirectTo = getAuthRedirectUrl();
+  if (__DEV__) {
+    // Copy this exact value into Supabase → Auth → URL Configuration → Redirect URLs
+    // (or cover it with dataonlymobile://** / exp://** / exps://**).
+    console.log("[oauth] redirectTo=", redirectTo);
+  }
+
   const supabase = createMobileSupabaseClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo,
       skipBrowserRedirect: true,
+      // Surface Google account picker so the Custom Tab is not a silent bounce
+      // that leaves a blank supabase.co callback page when redirectTo mismatches.
+      queryParams: {
+        prompt: "select_account",
+      },
     },
   });
   if (error) throw error;
@@ -74,11 +109,22 @@ export async function signInWithGoogle(): Promise<{ cancelled: boolean }> {
     throw new Error("Google sign-in didn't start. Try again, or use email instead.");
   }
 
+  try {
+    await WebBrowser.warmUpAsync();
+  } catch {
+    // Warm-up is best-effort; AuthSession still works without it.
+  }
+
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (result.type !== "success" || !result.url) {
     return { cancelled: true };
   }
 
-  await createSessionFromUrl(result.url);
+  const created = await createSessionFromUrl(result.url);
+  if (!created) {
+    throw new Error(
+      "Google returned to the app without a session. Confirm Supabase Redirect URLs allow this app's redirect (Metro: [oauth] redirectTo=).",
+    );
+  }
   return { cancelled: false };
 }
