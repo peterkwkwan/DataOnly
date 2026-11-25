@@ -22,13 +22,15 @@ export function BuyModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const summary = LICENSE_SUMMARIES[cut.license];
+  const checkoutUnavailable =
+    "Checkout isn’t available for this listing right now. Try again later or contact the creator.";
 
   if (!open) return null;
 
   async function startCheckout() {
     setError(null);
     if (!configured) {
-      setError("Connect Supabase and sign in before purchasing.");
+      setError("Sign in isn’t available right now. Try again later.");
       return;
     }
     if (!user) {
@@ -48,38 +50,36 @@ export function BuyModal({
         try {
           data = JSON.parse(raw) as typeof data;
         } catch {
-          setError(
-            res.ok
-              ? "Checkout returned an invalid response"
-              : `Checkout failed (${res.status})`,
-          );
+          setError(checkoutUnavailable);
           return;
         }
       } else if (!res.ok) {
-        setError(`Checkout failed (${res.status})`);
+        setError(checkoutUnavailable);
         return;
       }
       if (!res.ok) {
-        if (data.code === "stripe_not_configured") {
-          setError(
-            "Stripe keys are not set yet. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY + STRIPE_SECRET_KEY (see README).",
-          );
-        } else if (data.code === "creator_not_onboarded") {
-          setError(data.error ?? "Creator payouts are not set up yet.");
-        } else if (data.code === "already_entitled") {
+        if (data.code === "already_entitled") {
           setError("You already own this datacut.");
+        } else if (data.code === "auth_required") {
+          setError("Sign in required to purchase.");
+        } else if (
+          data.code === "stripe_not_configured" ||
+          data.code === "creator_not_onboarded"
+        ) {
+          setError(checkoutUnavailable);
         } else {
-          setError(data.error ?? `Checkout failed (${res.status})`);
+          // Prefer API copy when present; checkout route keeps Stripe/Connect terms out of `error`.
+          setError(data.error ?? checkoutUnavailable);
         }
         return;
       }
       if (!data.url) {
-        setError("Checkout session missing redirect URL");
+        setError(checkoutUnavailable);
         return;
       }
       window.location.href = data.url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Checkout failed");
+    } catch {
+      setError(checkoutUnavailable);
     } finally {
       setBusy(false);
     }

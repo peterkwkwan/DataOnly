@@ -67,7 +67,7 @@ export function DatacutDetailClient({
   useEffect(() => {
     const checkout = searchParams.get("checkout");
     if (checkout === "success") {
-      setBanner("Payment received. Entitlement activates when the Stripe webhook lands (usually seconds).");
+      setBanner("Payment received. Access usually activates within a few seconds.");
       void refreshEntitlement();
     } else if (checkout === "cancel") {
       setBanner("Checkout canceled — no charge was made.");
