@@ -151,3 +151,81 @@ export async function upsertEntitlementFromSession(
 export function sessionLooksPaid(session: Stripe.Checkout.Session): boolean {
   return session.payment_status === "paid" || session.status === "complete";
 }
+
+/**
+ * Mark entitlements tied to a PaymentIntent as refunded (idempotent).
+ * Used by webhook (`charge.refunded` / `payment_intent.refunded`) and the admin refund API.
+ */
+export async function markEntitlementRefundedByPaymentIntent(
+  paymentIntentId: string,
+): Promise<{ updated: number; entitlementIds: string[] }> {
+  const piId = paymentIntentId?.trim();
+  if (!piId) {
+    return { updated: 0, entitlementIds: [] };
+  }
+
+  const admin = createServiceSupabaseClient();
+  const { data, error } = await admin
+    .from("entitlements")
+    .update({
+      status: "refunded",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_payment_intent_id", piId)
+    .in("status", ["active", "pending"])
+    .select("id");
+
+  if (error) {
+    throw new Error(
+      `entitlements refund update failed (${error.code ?? "unknown"}): ${error.message}`,
+    );
+  }
+
+  const entitlementIds = (data ?? []).map((row) => row.id as string);
+  return { updated: entitlementIds.length, entitlementIds };
+}
+
+/**
+ * Mark a single entitlement refunded by id (after a successful Stripe refund).
+ * Idempotent when already refunded/revoked.
+ */
+export async function markEntitlementRefundedById(
+  entitlementId: string,
+): Promise<{ id: string; status: string }> {
+  const admin = createServiceSupabaseClient();
+  const { data: existing, error: loadError } = await admin
+    .from("entitlements")
+    .select("id, status, stripe_payment_intent_id")
+    .eq("id", entitlementId)
+    .maybeSingle();
+
+  if (loadError) {
+    throw new Error(loadError.message);
+  }
+  if (!existing) {
+    throw new Error("Entitlement not found");
+  }
+  if (existing.status === "refunded" || existing.status === "revoked") {
+    return { id: existing.id, status: existing.status };
+  }
+
+  const { data, error } = await admin
+    .from("entitlements")
+    .update({
+      status: "refunded",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", entitlementId)
+    .select("id, status")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `entitlements refund update failed (${error.code ?? "unknown"}): ${error.message}`,
+    );
+  }
+  if (!data) {
+    throw new Error("Entitlement not found after update");
+  }
+  return { id: data.id, status: data.status };
+}

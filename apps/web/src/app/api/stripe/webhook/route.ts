@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/client";
 import { retrieveConnectFlagsV2 } from "@/lib/stripe/connect";
 import {
+  markEntitlementRefundedByPaymentIntent,
   sessionLooksPaid,
   upsertEntitlementFromSession,
 } from "@/lib/stripe/entitlements";
@@ -25,6 +26,22 @@ async function syncConnectAccountById(accountId: string) {
     })
     .eq("stripe_account_id", accountId);
   if (error) throw error;
+}
+
+function paymentIntentIdFromCharge(charge: Stripe.Charge): string | null {
+  const pi = charge.payment_intent;
+  if (typeof pi === "string" && pi.trim()) return pi.trim();
+  if (pi && typeof pi === "object" && "id" in pi && typeof pi.id === "string") {
+    return pi.id;
+  }
+  return null;
+}
+
+async function handlePaymentIntentRefunded(paymentIntentId: string, eventType: string) {
+  const result = await markEntitlementRefundedByPaymentIntent(paymentIntentId);
+  console.info(
+    `[stripe webhook] entitlement refunded pi=${paymentIntentId} updated=${result.updated} event=${eventType}`,
+  );
 }
 
 export async function POST(request: Request) {
@@ -80,8 +97,26 @@ export async function POST(request: Request) {
         await syncConnectAccountById(account.id);
         break;
       }
-      default:
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        const piId = paymentIntentIdFromCharge(charge);
+        if (piId) {
+          await handlePaymentIntentRefunded(piId, event.type);
+        } else {
+          console.warn(
+            `[stripe webhook] charge.refunded missing payment_intent charge=${charge.id}`,
+          );
+        }
         break;
+      }
+      default: {
+        // Some API versions emit payment_intent.refunded; not in every Stripe SDK typings set.
+        if ((event.type as string) === "payment_intent.refunded") {
+          const pi = event.data.object as Stripe.PaymentIntent;
+          await handlePaymentIntentRefunded(pi.id, event.type);
+        }
+        break;
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Webhook handler failed";

@@ -55,7 +55,8 @@ type PayoutStatus =
   | "incomplete"
   | "pending"
   | "active"
-  | "needs_update";
+  | "needs_update"
+  | "error";
 
 const PAYOUT_PILL_LABELS: Record<PayoutStatus, string> = {
   unavailable: "UNAVAILABLE",
@@ -64,6 +65,7 @@ const PAYOUT_PILL_LABELS: Record<PayoutStatus, string> = {
   pending: "PENDING",
   active: "ACTIVE",
   needs_update: "NEEDS UPDATE",
+  error: "ERROR",
 };
 
 const VIEW_APPLICATION_STATUSES = new Set<VerificationStatus>([
@@ -114,11 +116,21 @@ function payoutStatusFromConnect(connect: ConnectState): PayoutStatus {
   return "incomplete";
 }
 
-function payoutStatusPill(connect: ConnectState | null): {
+function payoutStatusPill(
+  connect: ConnectState | null,
+  connectFailed: boolean,
+): {
   label: string;
   status: PayoutStatus | "loading";
   helper: string | null;
 } {
+  if (connectFailed && !connect) {
+    return {
+      label: PAYOUT_PILL_LABELS.error,
+      status: "error",
+      helper: "Couldn't load payout status. Try again.",
+    };
+  }
   if (!connect) return { label: "…", status: "loading", helper: null };
   const status = payoutStatusFromConnect(connect);
   const helpers: Record<PayoutStatus, string> = {
@@ -128,13 +140,16 @@ function payoutStatusPill(connect: ConnectState | null): {
     pending: "Stripe is reviewing your payout details.",
     active: "You can receive sales.",
     needs_update: "Update your payout details to keep receiving sales.",
+    error: "Couldn't load payout status. Try again.",
   };
   return { label: PAYOUT_PILL_LABELS[status], status, helper: helpers[status] };
 }
 
 function payoutStatusPillClass(status: PayoutStatus | "loading"): string {
   if (status === "loading") return "status-pill status-pill--draft";
-  if (status === "unavailable") return "status-pill status-pill--rejected";
+  if (status === "unavailable" || status === "error") {
+    return "status-pill status-pill--rejected";
+  }
   if (status === "not_started") return "status-pill status-pill--draft";
   if (status === "incomplete") return "status-pill status-pill--submitted";
   if (status === "pending") return "status-pill status-pill--under_review";
@@ -153,6 +168,7 @@ export default function DashboardPage() {
   const [connectBusy, setConnectBusy] = useState(false);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
   const [connect, setConnect] = useState<ConnectState | null>(null);
+  const [connectFailed, setConnectFailed] = useState(false);
 
   async function refreshConnectStatus(sync = false) {
     try {
@@ -161,6 +177,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load payout status");
+      setConnectFailed(false);
       setConnect({
         configured: !!data.configured,
         accountId: data.accountId ?? null,
@@ -170,7 +187,9 @@ export default function DashboardPage() {
         requirementsPastDue: !!data.requirementsPastDue,
       });
     } catch (err) {
-      setConnectMsg(formatClientError(err, "Could not load payout status"));
+      setConnectFailed(true);
+      setConnectMsg("Couldn't load payout status. Try again.");
+      console.error("[dashboard payouts]", formatClientError(err, "Could not load payout status"));
     }
   }
 
@@ -350,13 +369,19 @@ export default function DashboardPage() {
   }
 
   const verificationPill = verificationStatusPill(creator, verification);
-  const payoutPill = payoutStatusPill(connect);
+  const payoutPill = payoutStatusPill(connect, connectFailed);
   const hideVerificationButton =
     !!creator?.verified || verification?.status === "approved";
   const verificationButtonLabel =
     verification && VIEW_APPLICATION_STATUSES.has(verification.status)
       ? "View application"
       : "Apply for Verified";
+  const payoutActionBlocked =
+    connectFailed ||
+    !connect ||
+    !connect.configured ||
+    payoutPill.status === "unavailable" ||
+    payoutPill.status === "error";
 
   return (
     <section className="page-view dashboard-view">
@@ -462,7 +487,18 @@ export default function DashboardPage() {
                 <span className="dashboard-payouts-spinner" aria-hidden="true" />
                 Redirecting to Stripe — don&apos;t close this tab.
               </p>
-            ) : (
+            ) : connectFailed ? (
+              <button
+                type="button"
+                className="primary-button small"
+                onClick={() => {
+                  setConnectMsg(null);
+                  void refreshConnectStatus(true);
+                }}
+              >
+                Retry
+              </button>
+            ) : payoutActionBlocked ? null : (
               <button
                 type="button"
                 className="primary-button small"
@@ -478,10 +514,16 @@ export default function DashboardPage() {
           <span className={payoutStatusPillClass(payoutPill.status)}>{payoutPill.label}</span>
         </p>
         {payoutPill.helper ? <p className="empty-hint">{payoutPill.helper}</p> : null}
-        {connectMsg ? <p className="empty-hint">{connectMsg}</p> : null}
-        <p className="empty-hint">
-          Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee.
-        </p>
+        {connectMsg && connectMsg !== payoutPill.helper ? (
+          <p className={connectFailed ? "form-error" : "empty-hint"}>{connectMsg}</p>
+        ) : null}
+        {!connectFailed ? (
+          <p className="empty-hint">
+            {payoutPill.status === "not_started" || payoutPill.status === "incomplete"
+              ? "No payout account yet. Set up payouts so buyers can purchase your listings."
+              : "Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee."}
+          </p>
+        ) : null}
       </section>
     </section>
   );

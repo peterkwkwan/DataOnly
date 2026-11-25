@@ -45,6 +45,7 @@ export function DatacutDetailClient({
   const searchParams = useSearchParams();
   const [buyOpen, setBuyOpen] = useState(false);
   const [entitled, setEntitled] = useState(false);
+  const [accessRevoked, setAccessRevoked] = useState<"refunded" | "revoked" | null>(null);
   const [entitlementLoading, setEntitlementLoading] = useState(false);
   const [access, setAccess] = useState<AccessPayload | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
@@ -57,15 +58,30 @@ export function DatacutDetailClient({
   const refreshEntitlement = useCallback(async () => {
     if (!configured || !user) {
       setEntitled(false);
+      setAccessRevoked(null);
       return;
     }
     setEntitlementLoading(true);
     try {
       const res = await fetch(`/api/entitlements/check?datacutId=${cut.id}`);
-      const data = (await res.json()) as { entitled?: boolean };
+      const data = (await res.json()) as {
+        entitled?: boolean;
+        reason?: string;
+        status?: string;
+      };
       setEntitled(!!data.entitled);
+      if (data.entitled) {
+        setAccessRevoked(null);
+      } else if (data.reason === "refunded" || data.status === "refunded") {
+        setAccessRevoked("refunded");
+      } else if (data.reason === "revoked" || data.status === "revoked") {
+        setAccessRevoked("revoked");
+      } else {
+        setAccessRevoked(null);
+      }
     } catch {
       setEntitled(false);
+      setAccessRevoked(null);
     } finally {
       setEntitlementLoading(false);
     }
@@ -202,6 +218,22 @@ export function DatacutDetailClient({
             >
               {accessBusy ? "Preparing…" : "Download"} <Icon name="arrow" size={16} />
             </button>
+          ) : accessRevoked ? (
+            <>
+              <button type="button" className="primary-button" disabled>
+                Access revoked
+              </button>
+              {accessRevoked === "refunded" ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={entitlementLoading}
+                  onClick={() => setBuyOpen(true)}
+                >
+                  Buy again
+                </button>
+              ) : null}
+            </>
           ) : (
             <button
               type="button"
@@ -230,6 +262,14 @@ export function DatacutDetailClient({
             {saved ? "Saved" : "Save"}
           </button>
         </div>
+
+        {accessRevoked && !entitled ? (
+          <p className="empty-hint" style={{ marginTop: 12 }}>
+            {accessRevoked === "refunded"
+              ? "This purchase was refunded. Download is no longer available."
+              : "Access to this datacut was revoked. Download is no longer available."}
+          </p>
+        ) : null}
 
         {accessError ? <p className="form-error">{accessError}</p> : null}
         {access ? (

@@ -96,7 +96,7 @@ export function AccountMenu() {
               <Link
                 role="menuitem"
                 className={
-                  pathname.startsWith("/admin")
+                  pathname.startsWith("/admin/verification")
                     ? "account-menu-item active"
                     : "account-menu-item"
                 }
@@ -104,7 +104,20 @@ export function AccountMenu() {
                 onClick={() => setOpen(false)}
               >
                 <Icon name="shield" size={16} />
-                Admin
+                Verification
+              </Link>
+              <Link
+                role="menuitem"
+                className={
+                  pathname.startsWith("/admin/refunds")
+                    ? "account-menu-item active"
+                    : "account-menu-item"
+                }
+                href="/admin/refunds"
+                onClick={() => setOpen(false)}
+              >
+                <Icon name="arrow" size={16} />
+                Refunds
               </Link>
             </div>
           ) : null}

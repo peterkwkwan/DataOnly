@@ -288,6 +288,7 @@ grant select, insert, update, delete on public.entitlements to service_role;
 5. Webhook `checkout.session.completed` (service_role) upserts `entitlements`. Success URL also calls `POST /api/stripe/confirm` with `session_id` so a missed webhook still grants access.
 6. Buyer sees **Download** when entitled. `/api/entitlements/access` checks an active entitlement, then mints a short-lived signed URL from the private `datacuts` Storage bucket. Access is refused without an active entitlement.
 7. Creators attach files on the listing form (or upload via Dashboard + set `storage_path`). Bucket / policy setup notes live with the project docs (`entitled-downloads`).
+8. Admin refunds at `/admin/refunds` (refunds the Checkout payment + marks entitlement `refunded`). Webhook `charge.refunded` / `payment_intent.refunded` also syncs status. Buyer sees **Access revoked** (no Download).
 
 ### SQL for Storage delivery
 
@@ -297,7 +298,7 @@ Paste `supabase/migrations/20260315000000_datacut_storage.sql` in the Supabase S
 
 - Creator payouts analytics / balance dashboard beyond Connect status.
 - Mobile Checkout (Expo still shows mock buy).
-- Refund / dispute UI; platform fee % still an open product decision (env default 10%).
+- Dispute / chargeback automation; platform fee % still an open product decision (env default 10%).
 - Counsel-finalized full license text (product summaries only).
 
 Without Stripe keys, the UI and APIs return clear `stripe_not_configured` errors — code + migrations still ship.
@@ -316,6 +317,7 @@ Without Stripe keys, the UI and APIs return clear `stripe_not_configured` errors
 | Purchase | Stripe Checkout + Connect Accounts v2 (recipient / Express); license summary before pay |
 | Entitlement | `entitlements` row from webhook; gates `/api/entitlements/access` |
 | Download | Private `datacuts` Storage bucket; signed URL after entitlement check |
+| Refunds | Admin `/admin/refunds` + webhook → entitlement `refunded`; buyer Download hidden |
 
 ## Scripts
 

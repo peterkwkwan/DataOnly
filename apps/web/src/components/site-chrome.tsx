@@ -102,9 +102,14 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
                 {isAdmin ? (
-                  <Link href="/admin/verification" onClick={() => setMobileMenu(false)}>
-                    Admin
-                  </Link>
+                  <>
+                    <Link href="/admin/verification" onClick={() => setMobileMenu(false)}>
+                      Verification
+                    </Link>
+                    <Link href="/admin/refunds" onClick={() => setMobileMenu(false)}>
+                      Refunds
+                    </Link>
+                  </>
                 ) : null}
                 <button
                   type="button"

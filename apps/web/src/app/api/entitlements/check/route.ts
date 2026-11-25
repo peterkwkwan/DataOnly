@@ -26,7 +26,6 @@ export async function GET(request: Request) {
     .select("*")
     .eq("user_id", user.id)
     .eq("datacut_id", datacutId)
-    .eq("status", "active")
     .maybeSingle();
 
   if (error) {
@@ -39,8 +38,27 @@ export async function GET(request: Request) {
   const entitlement = mapEntitlement(data as EntitlementRow);
   const summary = LICENSE_SUMMARIES[entitlement.license];
 
+  if (entitlement.status === "active") {
+    return NextResponse.json({
+      entitled: true,
+      status: entitlement.status,
+      entitlement,
+      licenseSummary: summary,
+    });
+  }
+
+  // Formerly entitled (refunded / revoked / pending) — buyer UI hides Download.
+  const reason =
+    entitlement.status === "refunded"
+      ? "refunded"
+      : entitlement.status === "revoked"
+        ? "revoked"
+        : "not_entitled";
+
   return NextResponse.json({
-    entitled: true,
+    entitled: false,
+    status: entitlement.status,
+    reason,
     entitlement,
     licenseSummary: summary,
   });

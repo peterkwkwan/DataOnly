@@ -37,13 +37,29 @@ export async function GET(request: Request) {
     .select("*")
     .eq("user_id", user.id)
     .eq("datacut_id", datacutId)
-    .eq("status", "active")
     .maybeSingle();
 
   if (entError) {
     return NextResponse.json({ error: entError.message }, { status: 500 });
   }
-  if (!entitlementRow) {
+  if (!entitlementRow || entitlementRow.status !== "active") {
+    const status =
+      entitlementRow && typeof entitlementRow.status === "string"
+        ? entitlementRow.status
+        : null;
+    if (status === "refunded" || status === "revoked") {
+      return NextResponse.json(
+        {
+          error:
+            status === "refunded"
+              ? "This purchase was refunded. Download is no longer available."
+              : "Access to this datacut was revoked.",
+          code: status,
+          access: "denied",
+        },
+        { status: 403 },
+      );
+    }
     return NextResponse.json(
       { error: "Purchase required to access this datacut", code: "not_entitled" },
       { status: 403 },

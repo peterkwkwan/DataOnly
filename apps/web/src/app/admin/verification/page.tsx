@@ -173,7 +173,10 @@ export default function AdminVerificationPage() {
       <div className="page-intro">
         <span className="kicker">Admin</span>
         <h1>Verification queue</h1>
-        <p>Approve, request more info, or reject expert applications.</p>
+        <p>
+          Approve, request more info, or reject expert applications.{" "}
+          <Link href="/admin/refunds">Refunds</Link>
+        </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
       <div className="listing-table admin-queue">
