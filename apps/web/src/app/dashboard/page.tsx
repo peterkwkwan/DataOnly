@@ -409,8 +409,13 @@ export default function DashboardPage() {
                       {listingPill.label}
                     </span>
                     <span className="listing-row-meta-detail">
-                      {cut.license} · ${cut.price}
+                      {`${
+                        cut.license === "commercial"
+                          ? "Commercial License"
+                          : "Personal License"
+                      } · $${cut.price}`}
                     </span>
+
                   </span>
                 </div>
                 <div className="listing-row-actions">
