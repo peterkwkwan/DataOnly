@@ -1,6 +1,7 @@
 import { LICENSE_SUMMARIES, mapEntitlement, type EntitlementRow } from "@dataonly/core";
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getAuthedRequest } from "@/lib/supabase/request-auth";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   if (!isSupabaseConfigured()) {
@@ -13,10 +14,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "datacutId query required" }, { status: 400 });
   }
 
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getAuthedRequest(request);
   if (!user) {
     return NextResponse.json({ entitled: false, reason: "auth_required" });
   }

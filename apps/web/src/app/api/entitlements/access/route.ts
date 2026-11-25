@@ -5,7 +5,8 @@ import {
 } from "@dataonly/core";
 import { NextResponse } from "next/server";
 import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
-import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getAuthedRequest } from "@/lib/supabase/request-auth";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { DATACUT_STORAGE_BUCKET, SIGNED_URL_EXPIRES_SEC } from "@/lib/storage";
 
 /**
@@ -24,10 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "datacutId query required" }, { status: 400 });
   }
 
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getAuthedRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Sign in required", code: "auth_required" }, { status: 401 });
   }

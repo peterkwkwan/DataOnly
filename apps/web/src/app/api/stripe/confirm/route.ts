@@ -6,7 +6,7 @@ import {
 } from "@/lib/stripe/entitlements";
 import { isStripeConfigured } from "@/lib/stripe/config";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getAuthedRequest } from "@/lib/supabase/request-auth";
 
 export const runtime = "nodejs";
 
@@ -51,10 +51,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getAuthedRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Sign in required", code: "auth_required" }, { status: 401 });
   }

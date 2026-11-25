@@ -8,10 +8,16 @@ import {
   platformFeeCents,
 } from "@/lib/stripe/config";
 import { getStripe } from "@/lib/stripe/client";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  isAllowedMobileReturnUrl,
+  mobileCheckoutBridgeUrl,
+} from "@/lib/stripe/mobile-return";
+import { getAuthedRequest } from "@/lib/supabase/request-auth";
 
 type Body = {
   datacutId?: number;
+  /** Expo Linking.createURL base (no query). Enables mobile deep-link return. */
+  mobileReturnUrl?: string;
 };
 
 /** Buyer-facing copy — no Connect/Stripe API/config terms. */
@@ -46,10 +52,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "datacutId is required" }, { status: 400 });
   }
 
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const mobileReturnUrl =
+    typeof body.mobileReturnUrl === "string" ? body.mobileReturnUrl.trim() : "";
+  if (mobileReturnUrl && !isAllowedMobileReturnUrl(mobileReturnUrl)) {
+    return NextResponse.json(
+      { error: "Invalid mobileReturnUrl", code: "invalid_return_url" },
+      { status: 400 },
+    );
+  }
+
+  const { user, supabase } = await getAuthedRequest(request);
   if (!user) {
     return NextResponse.json({ error: "Sign in required", code: "auth_required" }, { status: 401 });
   }
@@ -125,6 +137,16 @@ export async function POST(request: Request) {
   const fee = platformFeeCents(amountCents);
   const license = cut.license === "commercial" ? "commercial" : "personal";
   const origin = appOrigin();
+  const successUrl = mobileReturnUrl
+    ? mobileCheckoutBridgeUrl({
+        to: mobileReturnUrl,
+        status: "success",
+        includeSessionPlaceholder: true,
+      })
+    : `${origin}/datacuts/${cut.slug}?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = mobileReturnUrl
+    ? mobileCheckoutBridgeUrl({ to: mobileReturnUrl, status: "cancel" })
+    : `${origin}/datacuts/${cut.slug}?checkout=cancel`;
   const stripe = getStripe();
 
   const { data: profile } = await supabase
@@ -191,8 +213,8 @@ export async function POST(request: Request) {
         platform_fee_cents: String(fee),
         platform_fee_percent: String(getPlatformFeePercent()),
       },
-      success_url: `${origin}/datacuts/${cut.slug}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/datacuts/${cut.slug}?checkout=cancel`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
 
     return NextResponse.json({

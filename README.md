@@ -113,12 +113,15 @@ set role = 'admin'
 where email = 'you@example.com';
 ```
 
-10. Optional Expo stub (`apps/mobile/.env`):
+10. Expo mobile (`apps/mobile/.env`) — auth + Stripe Checkout against the web API:
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+EXPO_PUBLIC_API_URL=http://localhost:3000
 ```
+
+See `docs/mobile-checkout.md` in the project store for Checkout return + test steps. On a physical device, use your machine’s LAN IP instead of `localhost`.
 
 Helper reminder script (prints the same steps):
 
@@ -138,8 +141,9 @@ npm run seed:help
 | `STRIPE_WEBHOOK_SECRET` | `apps/web/.env.local` (server-only) | Webhook signing secret (`whsec_…`) |
 | `STRIPE_PLATFORM_FEE_PERCENT` | optional, default `10` | Platform fee % of listing price |
 | `NEXT_PUBLIC_APP_URL` | optional | Canonical origin for Checkout / Connect return URLs (defaults to `http://localhost:3000`) |
-| `EXPO_PUBLIC_SUPABASE_URL` | `apps/mobile/.env` (optional) | Mobile stub |
-| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `apps/mobile/.env` (optional) | Mobile stub |
+| `EXPO_PUBLIC_SUPABASE_URL` | `apps/mobile/.env` | Mobile Supabase auth (same project as web) |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `apps/mobile/.env` | Mobile publishable key |
+| `EXPO_PUBLIC_API_URL` | `apps/mobile/.env` | Web origin for `/api/stripe/*` + `/api/entitlements/*` |
 
 ### What Peter creates in the dashboard
 
@@ -301,7 +305,7 @@ Paste `supabase/migrations/20260316000000_entitlement_downloaded_at.sql` after t
 ### Still stubbed / not in this slice
 
 - Creator payouts analytics / balance dashboard beyond Connect status.
-- Mobile Checkout (Expo still shows mock buy).
+- Mobile catalog still uses mock data (seed IDs align); Checkout hits the live web API when `EXPO_PUBLIC_API_URL` is set.
 - Dispute / chargeback automation; platform fee % still an open product decision (env default 10%).
 - Counsel-finalized full license text (product summaries only).
 
