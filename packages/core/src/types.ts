@@ -12,7 +12,7 @@ export type IndustryIconName =
 
 export type LicenseTemplate = "personal" | "commercial";
 
-export type ListingStatus = "draft" | "published";
+export type ListingStatus = "draft" | "published" | "unpublished";
 
 export type VerificationStatus =
   | "draft"

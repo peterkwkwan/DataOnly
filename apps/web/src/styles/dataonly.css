@@ -3504,14 +3504,17 @@ footer button {
   color: var(--muted);
   margin: 0;
 }
-.listing-status {
-  font-weight: 650;
+.listing-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
 }
-.listing-status--published {
-  color: color-mix(in srgb, var(--color-forest) 40%, var(--lime));
+.listing-row-meta-detail {
+  color: var(--muted);
 }
-.listing-status--draft {
-  color: color-mix(in srgb, var(--color-caution) 60%, var(--muted));
+.listing-row .status-pill {
+  color: var(--ink);
 }
 .admin-row {
   flex-direction: column;

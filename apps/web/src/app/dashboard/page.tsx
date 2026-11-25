@@ -8,8 +8,36 @@ import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { Creator, Datacut, VerificationApplication, VerificationStatus } from "@dataonly/core";
+import type {
+  Creator,
+  Datacut,
+  ListingStatus,
+  VerificationApplication,
+  VerificationStatus,
+} from "@dataonly/core";
 import { mapDatacut, mapVerification, type DatacutRow, type VerificationRow } from "@dataonly/core";
+
+const LISTING_PILL_LABELS: Record<ListingStatus, string> = {
+  draft: "DRAFT",
+  published: "PUBLISHED",
+  unpublished: "UNPUBLISHED",
+};
+
+function listingStatusPill(status: string | undefined | null): { label: string; status: string } {
+  const key = (status ?? "draft").toLowerCase();
+  if (key in LISTING_PILL_LABELS) {
+    return { label: LISTING_PILL_LABELS[key as ListingStatus], status: key };
+  }
+  // Any other listing status → uppercase words (license/price stay outside the pill).
+  return { label: key.replace(/_/g, " ").toUpperCase(), status: key };
+}
+
+function listingStatusPillClass(status: string): string {
+  if (status === "published") return "status-pill status-pill--approved";
+  if (status === "draft") return "status-pill status-pill--draft";
+  if (status === "unpublished") return "status-pill status-pill--rejected";
+  return "status-pill status-pill--submitted";
+}
 
 const VERIFICATION_PILL_LABELS: Record<VerificationStatus, string> = {
   draft: "DRAFT",
@@ -370,30 +398,32 @@ export default function DashboardPage() {
         ) : listings.length === 0 ? (
           <p className="empty-hint">No listings yet. Create a draft to get started.</p>
         ) : (
-          listings.map((cut) => (
-            <article key={cut.id} className="listing-row">
-              <div>
-                <b>{cut.title}</b>
-                <span>
-                  <span
-                    className={`listing-status listing-status--${cut.status ?? "draft"}`}
-                  >
-                    {cut.status ?? "draft"}
+          listings.map((cut) => {
+            const listingPill = listingStatusPill(cut.status);
+            return (
+              <article key={cut.id} className="listing-row">
+                <div>
+                  <b>{cut.title}</b>
+                  <span className="listing-row-meta">
+                    <span className={listingStatusPillClass(listingPill.status)}>
+                      {listingPill.label}
+                    </span>
+                    <span className="listing-row-meta-detail">
+                      {cut.license} · ${cut.price}
+                    </span>
                   </span>
-                  {" · "}
-                  {cut.license} · ${cut.price}
-                </span>
-              </div>
-              <div className="listing-row-actions">
-                <ListingRowMenu
-                  editHref={`/dashboard/listings/${cut.id}`}
-                  listingTitle={cut.title}
-                  deleting={deletingId === cut.id}
-                  onDelete={() => void handleDeleteListing(cut)}
-                />
-              </div>
-            </article>
-          ))
+                </div>
+                <div className="listing-row-actions">
+                  <ListingRowMenu
+                    editHref={`/dashboard/listings/${cut.id}`}
+                    listingTitle={cut.title}
+                    deleting={deletingId === cut.id}
+                    onDelete={() => void handleDeleteListing(cut)}
+                  />
+                </div>
+              </article>
+            );
+          })
         )}
       </div>
 

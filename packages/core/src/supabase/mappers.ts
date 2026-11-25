@@ -201,6 +201,13 @@ export function mapEntitlement(row: EntitlementRow): Entitlement {
   };
 }
 
+export function mapListingStatus(status: string | null | undefined): ListingStatus {
+  if (status === "published") return "published";
+  if (status === "unpublished") return "unpublished";
+  // Unknown / null values fall back to draft (safe for owner dashboard).
+  return "draft";
+}
+
 export function mapDatacut(row: DatacutRow): Datacut {
   const license = (row.license === "commercial" ? "commercial" : "personal") as LicenseTemplate;
   return {
@@ -224,7 +231,7 @@ export function mapDatacut(row: DatacutRow): Datacut {
     license,
     licenseBlurb: licenseBlurb(license),
     description: row.description,
-    status: (row.status === "draft" ? "draft" : "published") as ListingStatus,
+    status: mapListingStatus(row.status),
     storagePath: row.storage_path ?? null,
     fileName: row.file_name ?? null,
   };
