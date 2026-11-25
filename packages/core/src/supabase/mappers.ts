@@ -66,6 +66,7 @@ export type EntitlementRow = {
   stripe_payment_intent_id: string | null;
   stripe_account_id: string | null;
   status: string;
+  downloaded_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -196,6 +197,7 @@ export function mapEntitlement(row: EntitlementRow): Entitlement {
     stripePaymentIntentId: row.stripe_payment_intent_id,
     stripeAccountId: row.stripe_account_id,
     status: (row.status as EntitlementStatus) || "active",
+    downloadedAt: row.downloaded_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

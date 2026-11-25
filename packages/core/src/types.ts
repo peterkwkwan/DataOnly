@@ -73,6 +73,8 @@ export interface Entitlement {
   stripePaymentIntentId: string | null;
   stripeAccountId: string | null;
   status: EntitlementStatus;
+  /** ISO timestamp of first successful download; null until signed URL is minted. */
+  downloadedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

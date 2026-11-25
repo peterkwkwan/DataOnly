@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   const { data: entitlement, error: entError } = await admin
     .from("entitlements")
     .select(
-      "id, status, stripe_payment_intent_id, user_id, datacut_id, amount_cents, currency",
+      "id, status, stripe_payment_intent_id, user_id, datacut_id, amount_cents, currency, downloaded_at",
     )
     .eq("id", entitlementId)
     .maybeSingle();
@@ -95,6 +95,18 @@ export async function POST(request: Request) {
       entitlementId: entitlement.id,
       status: entitlement.status,
     });
+  }
+
+  if (entitlement.downloaded_at) {
+    return NextResponse.json(
+      {
+        error:
+          "This purchase can't be refunded because the buyer already downloaded the datacut.",
+        code: "already_downloaded",
+        downloadedAt: entitlement.downloaded_at,
+      },
+      { status: 409 },
+    );
   }
 
   if (entitlement.status !== "active" && entitlement.status !== "pending") {

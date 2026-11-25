@@ -13,9 +13,13 @@ type RefundRow = {
   currency: string;
   createdAt: string;
   paymentIntentId: string | null;
+  downloadedAt: string | null;
   datacutTitle: string;
   buyerLabel: string;
 };
+
+const ALREADY_DOWNLOADED_MSG =
+  "This purchase can't be refunded because the buyer already downloaded the datacut.";
 
 function formatMoney(cents: number, currency: string): string {
   const amount = (Number(cents) || 0) / 100;
@@ -52,7 +56,7 @@ export default function AdminRefundsPage() {
     const withProfiles = await supabase
       .from("entitlements")
       .select(
-        "id, status, amount_cents, currency, created_at, stripe_payment_intent_id, user_id, datacut_id, datacuts(title), profiles(email, display_name)",
+        "id, status, amount_cents, currency, created_at, downloaded_at, stripe_payment_intent_id, user_id, datacut_id, datacuts(title), profiles(email, display_name)",
       )
       .in("status", ["active", "pending", "refunded"])
       .order("created_at", { ascending: false })
@@ -62,7 +66,7 @@ export default function AdminRefundsPage() {
       const withoutProfiles = await supabase
         .from("entitlements")
         .select(
-          "id, status, amount_cents, currency, created_at, stripe_payment_intent_id, user_id, datacut_id, datacuts(title)",
+          "id, status, amount_cents, currency, created_at, downloaded_at, stripe_payment_intent_id, user_id, datacut_id, datacuts(title)",
         )
         .in("status", ["active", "pending", "refunded"])
         .order("created_at", { ascending: false })
@@ -103,6 +107,8 @@ export default function AdminRefundsPage() {
             typeof row.stripe_payment_intent_id === "string"
               ? row.stripe_payment_intent_id
               : null,
+          downloadedAt:
+            typeof row.downloaded_at === "string" ? row.downloaded_at : null,
           datacutTitle: cut?.title?.trim() || `Datacut #${row.datacut_id}`,
           buyerLabel,
         };
@@ -119,6 +125,11 @@ export default function AdminRefundsPage() {
 
   async function refundPurchase(row: RefundRow) {
     if (row.status === "refunded") return;
+    if (row.downloadedAt) {
+      setError(ALREADY_DOWNLOADED_MSG);
+      setNote(null);
+      return;
+    }
     if (
       !window.confirm(
         `Refund “${row.datacutTitle}” for ${row.buyerLabel}? The buyer will lose download access.`,
@@ -140,6 +151,7 @@ export default function AdminRefundsPage() {
         error?: string;
         alreadyRefunded?: boolean;
         status?: string;
+        code?: string;
       };
       if (!res.ok) {
         throw new Error(data.error ?? "Refund failed");
@@ -205,8 +217,9 @@ export default function AdminRefundsPage() {
         <span className="kicker">Admin</span>
         <h1>Refunds</h1>
         <p>
-          Issue a refund for a purchase. The buyer loses download access.{" "}
-          <Link href="/admin/verification">Verification queue</Link>
+          Issue a refund for a purchase that has not been downloaded yet. After
+          download, refunds are blocked. The buyer loses download access when
+          refunded. <Link href="/admin/verification">Verification queue</Link>
         </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
@@ -217,6 +230,8 @@ export default function AdminRefundsPage() {
         ) : (
           items.map((row) => {
             const refunded = row.status === "refunded";
+            const downloaded = Boolean(row.downloadedAt);
+            const canRefund = !refunded && !downloaded && Boolean(row.paymentIntentId);
             return (
               <article key={row.id} className="listing-row">
                 <div>
@@ -229,6 +244,12 @@ export default function AdminRefundsPage() {
                     >
                       {refunded ? "REFUNDED" : "ACTIVE"}
                     </span>
+                    {downloaded && !refunded ? (
+                      <>
+                        {" · "}
+                        <span className="status-pill status-pill--under_review">DOWNLOADED</span>
+                      </>
+                    ) : null}
                     {" · "}
                     {formatMoney(row.amountCents, row.currency)} · {row.buyerLabel} ·{" "}
                     {formatWhen(row.createdAt)}
@@ -237,11 +258,15 @@ export default function AdminRefundsPage() {
                 <div className="listing-row-actions">
                   {refunded ? (
                     <span className="empty-hint">Access revoked</span>
+                  ) : downloaded ? (
+                    <span className="empty-hint" title={ALREADY_DOWNLOADED_MSG}>
+                      Already downloaded — refund unavailable
+                    </span>
                   ) : (
                     <button
                       type="button"
                       className="text-button"
-                      disabled={busyId === row.id || !row.paymentIntentId}
+                      disabled={busyId === row.id || !canRefund}
                       onClick={() => void refundPurchase(row)}
                       title={
                         row.paymentIntentId

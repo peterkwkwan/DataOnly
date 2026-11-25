@@ -153,6 +153,30 @@ export async function GET(request: Request) {
     );
   }
 
+  // First successful signed-URL mint stamps downloaded_at (refunds blocked afterward).
+  let downloadedAt = entitlement.downloadedAt;
+  if (!downloadedAt) {
+    const now = new Date().toISOString();
+    const { data: stamped, error: stampError } = await admin
+      .from("entitlements")
+      .update({ downloaded_at: now, updated_at: now })
+      .eq("id", entitlement.id)
+      .is("downloaded_at", null)
+      .select("downloaded_at")
+      .maybeSingle();
+    if (stampError) {
+      console.warn(
+        "[entitlements access] downloaded_at stamp failed:",
+        entitlement.id,
+        stampError.message,
+      );
+    } else {
+      downloadedAt =
+        (stamped?.downloaded_at as string | null | undefined) ??
+        now;
+    }
+  }
+
   return NextResponse.json({
     access: "granted",
     delivery: {
@@ -181,6 +205,7 @@ export async function GET(request: Request) {
       purchasedAt: entitlement.createdAt,
       amountCents: entitlement.amountCents,
       currency: entitlement.currency,
+      downloadedAt,
     },
   });
 }

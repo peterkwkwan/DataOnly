@@ -286,13 +286,17 @@ grant select, insert, update, delete on public.entitlements to service_role;
 3. After return, dashboard refreshes Connect flags (`stripe_transfers` active ⇒ checkout unlocked).
 4. Buyer opens `/datacuts/[slug]` → **Buy datacut** → license summary → Stripe Checkout (destination charge + platform fee).
 5. Webhook `checkout.session.completed` (service_role) upserts `entitlements`. Success URL also calls `POST /api/stripe/confirm` with `session_id` so a missed webhook still grants access.
-6. Buyer sees **Download** when entitled. `/api/entitlements/access` checks an active entitlement, then mints a short-lived signed URL from the private `datacuts` Storage bucket. Access is refused without an active entitlement.
+6. Buyer sees **Download** when entitled. `/api/entitlements/access` checks an active entitlement, then mints a short-lived signed URL from the private `datacuts` Storage bucket. Access is refused without an active entitlement. First successful mint stamps `entitlements.downloaded_at`.
 7. Creators attach files on the listing form (or upload via Dashboard + set `storage_path`). Bucket / policy setup notes live with the project docs (`entitled-downloads`).
-8. Admin refunds at `/admin/refunds` (refunds the Checkout payment + marks entitlement `refunded`). Webhook `charge.refunded` / `payment_intent.refunded` also syncs status. Buyer sees **Access revoked** (no Download).
+8. Admin refunds at `/admin/refunds` (refunds the Checkout payment + marks entitlement `refunded`) **only if** `downloaded_at` is null. Webhook `charge.refunded` / `payment_intent.refunded` also syncs status. Buyer sees **Access revoked** (no Download).
 
 ### SQL for Storage delivery
 
 Paste `supabase/migrations/20260315000000_datacut_storage.sql` in the Supabase SQL Editor after the entitlements migration. It adds `datacuts.storage_path` / `file_name`, creates the private `datacuts` bucket, and owner-only Storage RLS.
+
+### SQL for download-gated refunds
+
+Paste `supabase/migrations/20260316000000_entitlement_downloaded_at.sql` after the Storage migration. It adds `entitlements.downloaded_at` (null until first signed URL).
 
 ### Still stubbed / not in this slice
 
@@ -316,8 +320,8 @@ Without Stripe keys, the UI and APIs return clear `stripe_not_configured` errors
 | Badge | `creators.verified` from DB after approve |
 | Purchase | Stripe Checkout + Connect Accounts v2 (recipient / Express); license summary before pay |
 | Entitlement | `entitlements` row from webhook; gates `/api/entitlements/access` |
-| Download | Private `datacuts` Storage bucket; signed URL after entitlement check |
-| Refunds | Admin `/admin/refunds` + webhook → entitlement `refunded`; buyer Download hidden |
+| Download | Private `datacuts` Storage bucket; signed URL after entitlement check; stamps `downloaded_at` |
+| Refunds | Admin `/admin/refunds` + webhook → entitlement `refunded`; blocked after download; buyer Download hidden |
 
 ## Scripts
 
