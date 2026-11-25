@@ -141,8 +141,12 @@ export async function POST(request: Request) {
       mode: "payment",
       // Stripe API: managed_payments[enabled]=false (SDK object form).
       managed_payments: { enabled: false },
+      // Recovery / confirm: webhook + /api/stripe/confirm both key off this.
+      client_reference_id: user.id,
       customer: profile?.stripe_customer_id || undefined,
-      customer_email: profile?.stripe_customer_id ? undefined : profile?.email || user.email || undefined,
+      customer_email: profile?.stripe_customer_id
+        ? undefined
+        : profile?.email || user.email || undefined,
       line_items: [
         {
           quantity: 1,
@@ -165,13 +169,18 @@ export async function POST(request: Request) {
         transfer_data: {
           destination: creator.stripe_account_id,
         },
+        // Fallback if Checkout Session metadata is sparse in a webhook payload.
         metadata: {
           user_id: user.id,
           datacut_id: String(cut.id),
           license,
           license_version: LICENSE_TEMPLATE_VERSION,
+          creator_id: creator.id,
+          stripe_account_id: creator.stripe_account_id,
+          platform_fee_cents: String(fee),
         },
       },
+      // Required by webhook / confirm: user_id + datacut_id (and fee/account for audit).
       metadata: {
         user_id: user.id,
         datacut_id: String(cut.id),

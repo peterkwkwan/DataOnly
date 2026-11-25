@@ -175,10 +175,50 @@ Connected accounts are created with `POST /v2/core/accounts` (recipient + `strip
    - `STRIPE_SECRET_KEY`
 5. **Developers → Webhooks → Add endpoint**
    - URL: `https://YOUR_HOST/api/stripe/webhook` (for local: use [Stripe CLI](https://stripe.com/docs/stripe-cli) `stripe listen --forward-to localhost:3000/api/stripe/webhook`)
-   - Events: `checkout.session.completed`, `account.updated`
-   - Copy the signing secret → `STRIPE_WEBHOOK_SECRET`
-6. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set so the webhook can upsert `entitlements`.
+   - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `account.updated`
+   - Copy the signing secret → `STRIPE_WEBHOOK_SECRET` (**when using `stripe listen`, use the `whsec_…` the CLI prints**, not a Dashboard endpoint secret)
+6. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set so the webhook / confirm / backfill paths can upsert `entitlements` (RLS has no buyer INSERT policy — service role only).
 7. Optional: `STRIPE_CONNECT_DEFAULT_COUNTRY=us` (ISO alpha-2) for new connected accounts.
+
+### Local `stripe listen` — what success looks like
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+# Ready! Your webhook signing secret is whsec_…   ← paste into STRIPE_WEBHOOK_SECRET and restart next
+```
+
+After a test card Checkout you must see **both** lines:
+
+```text
+--> checkout.session.completed [evt_…]
+<-- [200] POST http://localhost:3000/api/stripe/webhook [evt_…]
+```
+
+Next.js logs should include `entitlement upserted session=cs_…`. Then Supabase `entitlements` has a row for that buyer + datacut.
+
+| CLI / HTTP symptom | Likely cause |
+| --- | --- |
+| No `-->` event at all | `stripe listen` not running, wrong Stripe account/mode, or Checkout never completed |
+| `-->` then `<-- [400]` | `STRIPE_WEBHOOK_SECRET` ≠ CLI `whsec_` (restart Next after fixing) |
+| `-->` then `<-- [503]` | `STRIPE_WEBHOOK_SECRET` or `SUPABASE_SERVICE_ROLE_KEY` missing in `apps/web/.env.local` |
+| `-->` then `<-- [500]` | Upsert failed (migration not applied, bad metadata, Supabase error) — check Next console for `[stripe webhook]` |
+| `200` but table still empty | Looking at wrong Supabase project, or confirm/backfill against a different DB |
+
+Checkout Session **metadata** (set by `POST /api/stripe/checkout`) must include at least `user_id` + `datacut_id`. Also set: `license`, `license_version`, `stripe_account_id`, `platform_fee_cents`. The same keys are mirrored on `payment_intent_data.metadata` as a webhook fallback. `client_reference_id` is the buyer user id.
+
+### Backfill a paid session (entitlements empty)
+
+If Checkout already succeeded (`?checkout=success&session_id=cs_test_…`) but the table is empty:
+
+1. Fix env (`SUPABASE_SERVICE_ROLE_KEY`, CLI `whsec_` → `STRIPE_WEBHOOK_SECRET`) and keep `stripe listen` running for future buys.
+2. **Preferred — script** (same upsert as the webhook):
+
+```bash
+node --env-file=apps/web/.env.local scripts/backfill-entitlement.mjs cs_test_YOUR_SESSION_ID
+```
+
+3. **Or** open the success URL while signed in as the buyer (page calls `POST /api/stripe/confirm` with `session_id`).
+4. **Or** in Stripe Dashboard → Developers → Events → find `checkout.session.completed` for that session → **Resend** (with listen / endpoint healthy).
 
 ### SQL to run (if Alpha schema already applied)
 
@@ -245,7 +285,7 @@ grant select, insert, update, delete on public.entitlements to service_role;
 2. Creator signs in → `/dashboard` → **Set up payouts** (v2 Account Link → Express-hosted onboarding).
 3. After return, dashboard refreshes Connect flags (`stripe_transfers` active ⇒ checkout unlocked).
 4. Buyer opens `/datacuts/[slug]` → **Buy datacut** → license summary → Stripe Checkout (destination charge + platform fee).
-5. Webhook `checkout.session.completed` upserts `entitlements`.
+5. Webhook `checkout.session.completed` (service_role) upserts `entitlements`. Success URL also calls `POST /api/stripe/confirm` with `session_id` so a missed webhook still grants access.
 6. Buyer sees **Open access** (JSON stub until Storage delivery ships). Access is refused without an active entitlement.
 
 ### Still stubbed / not in this slice
@@ -280,4 +320,5 @@ npm run dev:mobile       # Expo
 npm run build:web        # Production web build
 npm run typecheck        # Workspace typecheck
 npm run seed:help        # Print Supabase seed / env steps
+npm run backfill:entitlement -- cs_test_…  # paid Checkout → entitlements repair
 ```

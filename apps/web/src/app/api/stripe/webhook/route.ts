@@ -2,62 +2,14 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/client";
 import { retrieveConnectFlagsV2 } from "@/lib/stripe/connect";
+import {
+  sessionLooksPaid,
+  upsertEntitlementFromSession,
+} from "@/lib/stripe/entitlements";
 import { getStripeWebhookSecret } from "@/lib/stripe/config";
 import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
-
-async function upsertEntitlementFromSession(session: Stripe.Checkout.Session) {
-  const meta = session.metadata ?? {};
-  const userId = meta.user_id;
-  const datacutId = Number(meta.datacut_id);
-  const license = meta.license === "commercial" ? "commercial" : "personal";
-  const licenseVersion = meta.license_version || "v1";
-  const platformFeeCents = Number(meta.platform_fee_cents || 0);
-  const stripeAccountId = meta.stripe_account_id || null;
-
-  if (!userId || !Number.isFinite(datacutId)) {
-    throw new Error("Checkout session missing user_id / datacut_id metadata");
-  }
-
-  const amountCents =
-    typeof session.amount_total === "number" ? session.amount_total : 0;
-  const currency = session.currency || "usd";
-  const paymentIntent =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id ?? null;
-
-  const admin = createServiceSupabaseClient();
-
-  if (session.customer && typeof session.customer === "string") {
-    await admin
-      .from("profiles")
-      .update({ stripe_customer_id: session.customer })
-      .eq("id", userId)
-      .is("stripe_customer_id", null);
-  }
-
-  const { error } = await admin.from("entitlements").upsert(
-    {
-      user_id: userId,
-      datacut_id: datacutId,
-      license,
-      license_version: licenseVersion,
-      amount_cents: amountCents,
-      currency,
-      platform_fee_cents: Number.isFinite(platformFeeCents) ? platformFeeCents : 0,
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: paymentIntent,
-      stripe_account_id: stripeAccountId,
-      status: "active",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,datacut_id" },
-  );
-
-  if (error) throw error;
-}
 
 /** Sync creators.stripe_* from Accounts v2 (recipient stripe_transfers). */
 async function syncConnectAccountById(accountId: string) {
@@ -108,10 +60,18 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.payment_status === "paid" || session.status === "complete") {
-          await upsertEntitlementFromSession(session);
+        if (sessionLooksPaid(session)) {
+          const result = await upsertEntitlementFromSession(session);
+          console.info(
+            `[stripe webhook] entitlement upserted session=${result.sessionId} user=${result.entitlementUserId} datacut=${result.datacutId} event=${event.type}`,
+          );
+        } else {
+          console.warn(
+            `[stripe webhook] skip entitlement session=${session.id} payment_status=${session.payment_status} status=${session.status}`,
+          );
         }
         break;
       }
@@ -125,7 +85,7 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Webhook handler failed";
-    console.error("[stripe webhook]", message);
+    console.error("[stripe webhook]", event.type, message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 

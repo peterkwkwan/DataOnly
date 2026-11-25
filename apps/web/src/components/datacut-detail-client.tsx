@@ -66,13 +66,53 @@ export function DatacutDetailClient({
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
-    if (checkout === "success") {
-      setBanner("Payment received. Access usually activates within a few seconds.");
-      void refreshEntitlement();
-    } else if (checkout === "cancel") {
+    if (checkout === "cancel") {
       setBanner("Checkout canceled — no charge was made.");
+      return;
     }
-  }, [refreshEntitlement, searchParams]);
+    if (checkout !== "success") return;
+
+    const sessionId = searchParams.get("session_id");
+    let cancelled = false;
+
+    async function confirmAndRefresh() {
+      setBanner("Payment received. Activating access…");
+      if (sessionId?.startsWith("cs_") && configured && user) {
+        try {
+          const res = await fetch("/api/stripe/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          const data = (await res.json()) as { ok?: boolean; error?: string };
+          if (cancelled) return;
+          if (res.ok && data.ok) {
+            setBanner("Payment received. Access is active.");
+          } else {
+            console.error("[checkout confirm]", data.error ?? res.status);
+            setBanner(
+              "Payment received. Access usually activates within a few seconds — refresh if it doesn’t.",
+            );
+          }
+        } catch (err) {
+          console.error("[checkout confirm]", err);
+          if (!cancelled) {
+            setBanner(
+              "Payment received. Access usually activates within a few seconds — refresh if it doesn’t.",
+            );
+          }
+        }
+      } else if (!cancelled) {
+        setBanner("Payment received. Access usually activates within a few seconds.");
+      }
+      if (!cancelled) await refreshEntitlement();
+    }
+
+    void confirmAndRefresh();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, refreshEntitlement, searchParams, user]);
 
   async function openAccess() {
     setAccessError(null);

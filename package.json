@@ -10,6 +10,7 @@
     "dev:mobile": "npm run start -w @dataonly/mobile",
     "build:web": "npm run build -w @dataonly/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "seed:help": "node ./scripts/seed-remote.mjs"
+    "seed:help": "node ./scripts/seed-remote.mjs",
+    "backfill:entitlement": "node --env-file=apps/web/.env.local ./scripts/backfill-entitlement.mjs"
   }
 }
