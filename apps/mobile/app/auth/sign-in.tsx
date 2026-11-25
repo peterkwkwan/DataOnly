@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,14 +14,28 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PageHeader, Screen } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
+import { signInWithGoogle } from "@/lib/oauth";
 import { createMobileSupabaseClient, isMobileSupabaseConfigured } from "@/lib/supabase";
 import { colors } from "@/lib/theme";
 
 type PasswordIntent = "sign-in" | "create";
 
+function GoogleMark() {
+  return (
+    <View style={styles.googleMark} accessibilityElementsHidden>
+      <Text style={styles.googleG}>G</Text>
+    </View>
+  );
+}
+
 export default function SignInScreen() {
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ next?: string }>();
+  const params = useLocalSearchParams<{
+    next?: string;
+    code?: string;
+    error?: string;
+    error_description?: string;
+  }>();
   const next = typeof params.next === "string" ? params.next : "/verification";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,16 +43,92 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const oauthHandled = useRef<string | null>(null);
   const creating = passwordIntent === "create";
 
   useEffect(() => {
     if (user) router.replace(next as "/verification");
   }, [next, user]);
 
+  // Cold / deep-link return: Supabase may open the app with ?code= on this screen.
+  useEffect(() => {
+    if (!isMobileSupabaseConfigured()) return;
+
+    const errorParam = typeof params.error === "string" ? params.error : null;
+    const errorDescription =
+      typeof params.error_description === "string" ? params.error_description : null;
+    if (errorParam) {
+      const key = `err:${errorParam}:${errorDescription ?? ""}`;
+      if (oauthHandled.current === key) return;
+      oauthHandled.current = key;
+      setError(
+        errorParam === "access_denied"
+          ? "Google sign-in was cancelled."
+          : errorDescription?.replace(/\+/g, " ").trim() ||
+              "Google sign-in didn't complete. Try again, or use email instead.",
+      );
+      return;
+    }
+
+    const code = typeof params.code === "string" ? params.code : null;
+    if (!code) return;
+    if (oauthHandled.current === code) return;
+    oauthHandled.current = code;
+
+    let cancelled = false;
+    setBusy(true);
+    setError(null);
+    void (async () => {
+      try {
+        const supabase = createMobileSupabaseClient();
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+        if (!cancelled) router.replace(next as "/verification");
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Google sign-in didn't complete. Try again, or use email instead.",
+          );
+        }
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [next, params.code, params.error, params.error_description]);
+
   function switchIntent(nextIntent: PasswordIntent) {
     setPasswordIntent(nextIntent);
     setError(null);
     setMessage(null);
+  }
+
+  async function onGoogleSignIn() {
+    setError(null);
+    setMessage(null);
+    if (!isMobileSupabaseConfigured()) {
+      setError("Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { cancelled } = await signInWithGoogle();
+      if (cancelled) return;
+      router.replace(next as "/verification");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Google sign-in didn't complete. Try again, or use email instead.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onSubmit() {
@@ -93,9 +183,22 @@ export default function SignInScreen() {
             />
             <Text style={styles.body}>
               {creating
-                ? "Create a new email + password account to apply for Verified on mobile."
-                : "Sign in with email and password to apply for Verified on mobile."}
+                ? "Create a new account to apply for Verified on mobile."
+                : "Sign in to apply for Verified on mobile."}
             </Text>
+            <Pressable
+              style={[styles.oauth, busy && styles.disabled]}
+              disabled={busy}
+              onPress={() => void onGoogleSignIn()}
+            >
+              <GoogleMark />
+              <Text style={styles.oauthText}>Continue with Google</Text>
+            </Pressable>
+            <View style={styles.divider} accessibilityRole="none">
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
               <TextInput
@@ -156,6 +259,41 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 48, gap: 14 },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22 },
+  oauth: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  oauthText: { color: colors.ink, fontWeight: "700", fontSize: 15 },
+  googleMark: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.canvas,
+  },
+  googleG: {
+    color: "#4285F4",
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 16,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 2,
+  },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
+  dividerText: { color: colors.muted, fontSize: 13, fontWeight: "600" },
   field: { gap: 6 },
   label: { color: colors.muted, fontSize: 13, fontWeight: "600" },
   input: {
