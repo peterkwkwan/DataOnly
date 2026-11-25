@@ -1,5 +1,7 @@
 import { makeRedirectUri } from "expo-auth-session";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 
 import { createMobileSupabaseClient } from "@/lib/supabase";
 
@@ -17,21 +19,56 @@ export function getAuthRedirectUrl() {
   return makeRedirectUri({
     scheme: "dataonlymobile",
     path: AUTH_CALLBACK_PATH,
+    // Expo Go on Android emulator: stabilize host (IP → localhost) so the
+    // Supabase redirectTo and Linking prefix checks agree.
+    preferLocalhost: true,
   });
 }
 
-/** Merge query + hash params (PKCE uses query; implicit may put tokens in the hash). */
+/**
+ * Prefix used for return-URL matching.
+ * Full `exp://127.0.0.1:8081/--/auth/sign-in` is brittle — Expo Go sometimes
+ * delivers a slightly different authority. Scheme-only still scopes to our app.
+ */
+function getAuthRedirectPrefix(redirectTo: string): string {
+  const match = /^(exp|exps|dataonlymobile):\/\//i.exec(redirectTo);
+  if (match) return `${match[1].toLowerCase()}://`;
+  return redirectTo;
+}
+
+function isOAuthReturnUrl(url: string, redirectTo: string): boolean {
+  const prefix = getAuthRedirectPrefix(redirectTo);
+  if (url.startsWith(prefix) || url.startsWith(redirectTo)) {
+    return /[?&#](code|access_token|error|error_code)=/.test(url);
+  }
+  // Expo Router may surface the path without the exact Metro authority.
+  return (
+    url.includes(AUTH_CALLBACK_PATH) &&
+    /[?&#](code|access_token|error|error_code)=/.test(url)
+  );
+}
+
+/**
+ * Merge query + hash params (PKCE uses query; implicit may put tokens in the hash).
+ * Avoid `new URL('exp://…')` — some RN engines reject custom schemes.
+ */
 function getOAuthParams(url: string): Record<string, string> {
-  const parsed = new URL(url);
   const params: Record<string, string> = {};
-  parsed.searchParams.forEach((value, key) => {
+  const qIndex = url.indexOf("?");
+  const hIndex = url.indexOf("#");
+  const query =
+    qIndex >= 0
+      ? hIndex > qIndex
+        ? url.slice(qIndex + 1, hIndex)
+        : url.slice(qIndex + 1)
+      : "";
+  const hash = hIndex >= 0 ? url.slice(hIndex + 1) : "";
+  new URLSearchParams(query).forEach((value, key) => {
     params[key] = value;
   });
-  if (parsed.hash) {
-    new URLSearchParams(parsed.hash.replace(/^#/, "")).forEach((value, key) => {
-      params[key] = value;
-    });
-  }
+  new URLSearchParams(hash).forEach((value, key) => {
+    params[key] = value;
+  });
   return params;
 }
 
@@ -83,12 +120,88 @@ export async function createSessionFromUrl(url: string): Promise<boolean> {
   return false;
 }
 
+type OAuthBrowserResult =
+  | { type: "success"; url: string }
+  | { type: "cancel" };
+
+/**
+ * Android: `openAuthSessionAsync` is a Custom Tabs + AppState + Linking polyfill
+ * with strict `url.startsWith(redirectTo)` matching. On Expo Go / emulator, Google's
+ * "Choose an account" page often spins forever after pick because the Custom Tab
+ * never hands `exp://…` / `dataonlymobile://…` back to the app.
+ *
+ * Open the **system browser** (`Linking.openURL`) and complete via our own Linking
+ * listener — Android intent resolution returns custom schemes far more reliably
+ * than Chrome Custom Tabs. iOS keeps ASWebAuthenticationSession.
+ */
+async function openOAuthBrowser(
+  authUrl: string,
+  redirectTo: string,
+): Promise<OAuthBrowserResult> {
+  if (Platform.OS !== "android") {
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectTo);
+    if (result.type === "success" && result.url) {
+      return { type: "success", url: result.url };
+    }
+    return { type: "cancel" };
+  }
+
+  return await new Promise<OAuthBrowserResult>((resolve, reject) => {
+    let settled = false;
+    let browserOpened = false;
+    let appStateReady = AppState.currentState !== null;
+
+    const finish = (result: OAuthBrowserResult) => {
+      if (settled) return;
+      settled = true;
+      linkSub.remove();
+      appSub.remove();
+      resolve(result);
+    };
+
+    const linkSub = Linking.addEventListener("url", ({ url }) => {
+      if (!isOAuthReturnUrl(url, redirectTo)) return;
+      finish({ type: "success", url });
+    });
+
+    const onAppState = (state: AppStateStatus) => {
+      if (!appStateReady) {
+        appStateReady = true;
+        return;
+      }
+      // User switched back to the app without a deep link (closed/abandoned browser).
+      if (state === "active" && browserOpened && !settled) {
+        setTimeout(() => {
+          if (!settled) finish({ type: "cancel" });
+        }, 500);
+      }
+    };
+    const appSub = AppState.addEventListener("change", onAppState);
+
+    void Linking.openURL(authUrl)
+      .then((opened) => {
+        browserOpened = opened;
+        if (!opened && !settled) {
+          finish({ type: "cancel" });
+        }
+      })
+      .catch((err) => {
+        if (settled) return;
+        settled = true;
+        linkSub.remove();
+        appSub.remove();
+        reject(err);
+      });
+  });
+}
+
 export async function signInWithGoogle(): Promise<{ cancelled: boolean }> {
   const redirectTo = getAuthRedirectUrl();
   if (__DEV__) {
     // Copy this exact value into Supabase → Auth → URL Configuration → Redirect URLs
     // (or cover it with dataonlymobile://** / exp://** / exps://**).
     console.log("[oauth] redirectTo=", redirectTo);
+    console.log("[oauth] redirectPrefix=", getAuthRedirectPrefix(redirectTo));
   }
 
   const supabase = createMobileSupabaseClient();
@@ -97,11 +210,13 @@ export async function signInWithGoogle(): Promise<{ cancelled: boolean }> {
     options: {
       redirectTo,
       skipBrowserRedirect: true,
-      // Surface Google account picker so the Custom Tab is not a silent bounce
-      // that leaves a blank supabase.co callback page when redirectTo mismatches.
-      queryParams: {
-        prompt: "select_account",
-      },
+      // Avoid prompt=select_account on Android: that interstitial is where
+      // Custom Tabs commonly spin forever after pick. Silent/default Google
+      // UX is fine once redirect handoff works; iOS still benefits from a
+      // visible picker when multiple accounts exist.
+      ...(Platform.OS === "ios"
+        ? { queryParams: { prompt: "select_account" } }
+        : {}),
     },
   });
   if (error) throw error;
@@ -109,13 +224,15 @@ export async function signInWithGoogle(): Promise<{ cancelled: boolean }> {
     throw new Error("Google sign-in didn't start. Try again, or use email instead.");
   }
 
-  try {
-    await WebBrowser.warmUpAsync();
-  } catch {
-    // Warm-up is best-effort; AuthSession still works without it.
+  if (Platform.OS !== "android") {
+    try {
+      await WebBrowser.warmUpAsync();
+    } catch {
+      // Warm-up is best-effort (iOS AuthSession).
+    }
   }
 
-  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+  const result = await openOAuthBrowser(data.url, redirectTo);
   if (result.type !== "success" || !result.url) {
     return { cancelled: true };
   }
