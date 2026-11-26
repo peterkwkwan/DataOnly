@@ -78,7 +78,8 @@ footer a {
   z-index: 2;
 }
 
-.datacut-card h3 a:hover {
+.datacut-card h3 a:hover,
+.listing-row b a:hover {
   text-decoration: underline;
 }
 
