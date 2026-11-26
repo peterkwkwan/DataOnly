@@ -49,7 +49,7 @@ export default function SignInScreen() {
     if (user) router.replace(next as "/verification");
   }, [next, user]);
 
-  // OAuth error query params on deep-link return (session itself: AuthSession + AuthContext Linking).
+  // OAuth error query params on deep-link return (session itself: AuthSession in oauth.ts).
   useEffect(() => {
     if (!isMobileSupabaseConfigured()) return;
 
