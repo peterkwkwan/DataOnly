@@ -371,7 +371,9 @@ export default function DashboardPage() {
               purchased.map((cut) => (
                 <article key={cut.entitlementId} className="listing-row">
                   <div>
-                    <b>{cut.title}</b>
+                    <b>
+                      <Link href={`/datacuts/${cut.slug}`}>{cut.title}</Link>
+                    </b>
                     <span className="listing-row-meta">
                       <span className="status-pill status-pill--approved">OWNED</span>
                       <span className="listing-row-meta-detail">
@@ -380,9 +382,6 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="listing-row-actions">
-                    <Link className="text-button" href={`/datacuts/${cut.slug}`}>
-                      Open
-                    </Link>
                     <button
                       type="button"
                       className="primary-button small"
