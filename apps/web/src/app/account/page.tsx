@@ -329,9 +329,6 @@ export default function AccountPage() {
           {creator?.verified ? <Verified /> : null}
         </h1>
         <p>Verification and payout settings for your seller account.</p>
-        <Link className="link-button" href="/dashboard">
-          Back to dashboard
-        </Link>
       </div>
 
       {error ? <p className="form-error dashboard-inline-error">{error}</p> : null}
