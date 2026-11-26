@@ -8,6 +8,7 @@
   "scripts": {
     "dev:web": "npm run dev -w @dataonly/web",
     "dev:mobile": "npm run start -w @dataonly/mobile",
+    "run:android": "npm run run:android -w @dataonly/mobile",
     "build:web": "npm run build -w @dataonly/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "seed:help": "node ./scripts/seed-remote.mjs",

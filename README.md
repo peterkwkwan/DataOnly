@@ -46,6 +46,13 @@ npm run dev:mobile
 
 Same mock catalog via `@dataonly/core`. Expo env stubs: see `apps/mobile/.env.example`.
 
+Android **dev build** (required for custom scheme OAuth; do not run bare `npx expo` from the monorepo root — that loads default `AppEntry` and fails to resolve `App`):
+
+```bash
+npm run run:android
+# equivalent: cd apps/mobile && npx expo run:android
+```
+
 ## Supabase setup (Alpha)
 
 Do this in the [Supabase dashboard](https://supabase.com/dashboard) — this repo does **not** ship secret values.
