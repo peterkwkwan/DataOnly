@@ -381,11 +381,13 @@ function DashboardPageContent() {
               <h2>Your listings</h2>
               <span>{listings.length}</span>
             </div>
-            <div className="dashboard-section-actions">
-              <Link className="primary-button small" href="/dashboard/listings/new">
-                New listing
-              </Link>
-            </div>
+            {listings.length > 0 ? (
+              <div className="dashboard-section-actions">
+                <Link className="primary-button small" href="/dashboard/listings/new">
+                  New listing
+                </Link>
+              </div>
+            ) : null}
           </div>
 
           <div className="listing-table">

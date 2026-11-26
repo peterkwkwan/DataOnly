@@ -3353,6 +3353,10 @@ footer button {
 .dashboard-tabs {
   margin: 8px 0 0;
   padding-bottom: 18px;
+  gap: 8px;
+}
+.dashboard-tabs > button {
+  margin: 0;
 }
 .dashboard-section-toolbar {
   align-items: center;
