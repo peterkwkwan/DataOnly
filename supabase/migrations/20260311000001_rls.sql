@@ -123,6 +123,7 @@ grant insert, update, delete on public.categories to authenticated;
 
 grant select on public.creators to anon, authenticated;
 grant insert, update on public.creators to authenticated;
+grant select, update on public.creators to service_role;
 
 grant select on public.datacuts to anon, authenticated;
 grant insert, update, delete on public.datacuts to authenticated;
