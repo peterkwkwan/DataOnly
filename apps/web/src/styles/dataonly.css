@@ -287,6 +287,14 @@
 .notifications-bell {
   position: relative;
 }
+.notifications-bell .icon-button {
+  border-radius: 999px;
+}
+.notifications-bell .icon-button:hover,
+.notifications-bell .icon-button:focus-visible,
+.notifications-bell .icon-button[aria-expanded="true"] {
+  background: rgba(16, 27, 24, 0.05);
+}
 .notifications-bell-icon {
   display: grid;
   transform-origin: 50% 15%;
