@@ -284,7 +284,7 @@ export default function AdminReportsPage() {
                   </button>
                   <button
                     type="button"
-                    className="primary-button small"
+                    className="secondary-button small"
                     disabled={busyId === report.id}
                     onClick={() =>
                       void patchReport(report, "under_review", {
