@@ -12,12 +12,24 @@ import {
   isAllowedMobileReturnUrl,
   mobileCheckoutBridgeUrl,
 } from "@/lib/stripe/mobile-return";
+import {
+  createServiceSupabaseClient,
+  hasServiceRoleKey,
+} from "@/lib/supabase/admin";
 import { getAuthedRequest } from "@/lib/supabase/request-auth";
 
 type Body = {
   datacutId?: number;
   /** Expo Linking.createURL base (no query). Enables mobile deep-link return. */
   mobileReturnUrl?: string;
+};
+
+type CheckoutCreator = {
+  id: string;
+  name: string | null;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean | null;
+  user_id: string | null;
 };
 
 /** Buyer-facing copy — no Connect/Stripe API/config terms. */
@@ -36,6 +48,13 @@ export async function POST(request: Request) {
         error: CHECKOUT_UNAVAILABLE,
         code: "stripe_not_configured",
       },
+      { status: 503 },
+    );
+  }
+  if (!hasServiceRoleKey()) {
+    console.error("[stripe checkout] SUPABASE_SERVICE_ROLE_KEY is not set");
+    return NextResponse.json(
+      { error: CHECKOUT_UNAVAILABLE, code: "service_role_missing" },
       { status: 503 },
     );
   }
@@ -66,11 +85,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in required", code: "auth_required" }, { status: 401 });
   }
 
+  // Embed creators(...) under buyer RLS can null out even when creator_id is set.
   const { data: cut, error: cutError } = await supabase
     .from("datacuts")
-    .select(
-      "id, slug, title, price, license, status, creator_id, creators(id, name, stripe_account_id, stripe_charges_enabled, user_id)",
-    )
+    .select("id, slug, title, price, license, status, creator_id")
     .eq("id", datacutId)
     .maybeSingle();
 
@@ -81,15 +99,35 @@ export async function POST(request: Request) {
   if (!cut || cut.status !== "published") {
     return NextResponse.json({ error: "Datacut not available for purchase" }, { status: 404 });
   }
+  if (!cut.creator_id) {
+    console.error("[stripe checkout] datacut missing creator_id", { datacutId: cut.id });
+    return NextResponse.json({ error: CHECKOUT_UNAVAILABLE }, { status: 500 });
+  }
 
-  const creatorRel = cut.creators;
-  const creator = Array.isArray(creatorRel) ? creatorRel[0] : creatorRel;
+  const admin = createServiceSupabaseClient();
+  const { data: creatorRow, error: creatorError } = await admin
+    .from("creators")
+    .select("id, name, stripe_account_id, stripe_charges_enabled, user_id")
+    .eq("id", cut.creator_id)
+    .maybeSingle();
+
+  if (creatorError) {
+    console.error("[stripe checkout] creator lookup failed", {
+      datacutId: cut.id,
+      creatorId: cut.creator_id,
+      message: creatorError.message,
+    });
+    return NextResponse.json({ error: CHECKOUT_UNAVAILABLE }, { status: 500 });
+  }
+
+  const creator = creatorRow as CheckoutCreator | null;
   if (!creator?.stripe_account_id || !creator.stripe_charges_enabled) {
     console.error(
       "[stripe checkout] creator not ready for destination charges",
       {
         datacutId: cut.id,
-        creatorId: creator?.id ?? null,
+        creatorId: cut.creator_id,
+        creatorRowFound: Boolean(creator),
         hasStripeAccount: Boolean(creator?.stripe_account_id),
         chargesEnabled: Boolean(creator?.stripe_charges_enabled),
       },
