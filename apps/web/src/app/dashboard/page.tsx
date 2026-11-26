@@ -392,7 +392,17 @@ function DashboardPageContent() {
             {error ? (
               <p className="empty-hint">Listings unavailable until the error above is fixed.</p>
             ) : listings.length === 0 ? (
-              <p className="empty-hint">No listings yet. Create a draft to get started.</p>
+              <div className="m-empty-state" style={{ marginTop: 40 }}>
+                <h3>No listings yet</h3>
+                <p>Create a draft to get started.</p>
+                <Link
+                  href="/dashboard/listings/new"
+                  className="primary-button"
+                  style={{ display: "inline-flex" }}
+                >
+                  New listing
+                </Link>
+              </div>
             ) : (
               listings.map((cut) => {
                 const listingPill = listingStatusPill(cut.status);
