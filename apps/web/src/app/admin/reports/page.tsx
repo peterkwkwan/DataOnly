@@ -10,9 +10,20 @@ import {
 } from "@dataonly/core";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { MenuSelect } from "@/components/menu-select";
 import { useAuth } from "@/context/auth-context";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
+
+type ReasonFilter = "all" | ReportReason;
+
+const REASON_FILTER_OPTIONS: { value: ReasonFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  ...(Object.keys(REPORT_REASON_LABELS) as ReportReason[]).map((r) => ({
+    value: r,
+    label: REPORT_REASON_LABELS[r],
+  })),
+];
 
 type QueueItem = Report & {
   datacutTitle?: string;
@@ -55,7 +66,7 @@ export default function AdminReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [filterReason, setFilterReason] = useState<string>("all");
+  const [filterReason, setFilterReason] = useState<ReasonFilter>("all");
 
   const loadQueue = useCallback(async () => {
     const supabase = createBrowserSupabaseClient();
@@ -201,20 +212,14 @@ export default function AdminReportsPage() {
         </p>
       </div>
 
-      <label style={{ display: "inline-flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-        Reason
-        <select
-          value={filterReason}
-          onChange={(e) => setFilterReason(e.target.value)}
-        >
-          <option value="all">All</option>
-          {(Object.keys(REPORT_REASON_LABELS) as ReportReason[]).map((r) => (
-            <option key={r} value={r}>
-              {REPORT_REASON_LABELS[r]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <MenuSelect
+        label="Reason"
+        layout="inline"
+        className="admin-reason-filter"
+        value={filterReason}
+        options={REASON_FILTER_OPTIONS}
+        onChange={setFilterReason}
+      />
 
       {error ? <p className="form-error">{error}</p> : null}
 

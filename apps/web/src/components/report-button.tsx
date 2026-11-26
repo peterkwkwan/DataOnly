@@ -7,7 +7,9 @@ import {
   type ReportReason,
   type ReportTargetType,
 } from "@dataonly/core";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
+import { MenuSelect } from "@/components/menu-select";
 import { useAuth } from "@/context/auth-context";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -17,22 +19,56 @@ type Props = {
   datacutId?: number | null;
   creatorId?: string | null;
   label?: string;
+  /** text = link button; overflow = ⋯ menu with Report item */
+  variant?: "text" | "overflow";
 };
+
+const REASON_OPTIONS = REPORT_REASONS.map((r) => ({
+  value: r,
+  label: REPORT_REASON_LABELS[r],
+}));
 
 export function ReportButton({
   targetType,
   datacutId = null,
   creatorId = null,
   label = "Report",
+  variant = "text",
 }: Props) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reason, setReason] = useState<ReportReason>("copyright");
   const [details, setDetails] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (menuRef.current && target && !menuRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   if (!isSupabaseConfigured()) return null;
 
@@ -79,11 +115,54 @@ export function ReportButton({
     setReason("copyright");
   }
 
-  return (
-    <>
+  function openReport() {
+    setMenuOpen(false);
+    setOpen(true);
+  }
+
+  const trigger =
+    variant === "overflow" ? (
+      <div className="listing-row-menu detail-report-menu" ref={menuRef}>
+        <button
+          type="button"
+          className="listing-row-menu-trigger"
+          aria-label="More actions"
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-controls={menuId}
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          <Icon name="more" size={18} />
+        </button>
+        {menuOpen ? (
+          <div
+            className="listing-row-menu-panel"
+            id={menuId}
+            role="menu"
+            aria-label="More actions"
+          >
+            <div className="listing-row-menu-items">
+              <button
+                type="button"
+                role="menuitem"
+                className="listing-row-menu-item"
+                onClick={openReport}
+              >
+                {label}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    ) : (
       <button type="button" className="text-button" onClick={() => setOpen(true)}>
         {label}
       </button>
+    );
+
+  return (
+    <>
+      {trigger}
       {open ? (
         <div
           className="buy-modal-backdrop"
@@ -114,19 +193,12 @@ export function ReportButton({
                   Flag copyright, privacy, prohibited, or spam issues. Not legal advice — we may
                   unpublish while investigating.
                 </p>
-                <label>
-                  Reason *
-                  <select
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value as ReportReason)}
-                  >
-                    {REPORT_REASONS.map((r) => (
-                      <option key={r} value={r}>
-                        {REPORT_REASON_LABELS[r]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <MenuSelect
+                  label="Reason *"
+                  value={reason}
+                  options={REASON_OPTIONS}
+                  onChange={setReason}
+                />
                 <label>
                   Details
                   <textarea

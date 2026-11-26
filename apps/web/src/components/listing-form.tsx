@@ -14,9 +14,21 @@ import {
 import type { Category, Datacut, LicenseTemplate, ListingStatus } from "@dataonly/core";
 import { licenseBlurb } from "@dataonly/core";
 import { Icon } from "@/components/icons";
+import { MenuSelect } from "@/components/menu-select";
 import { formatClientError } from "@/lib/errors";
 import { buildDatacutObjectPath, DATACUT_STORAGE_BUCKET, sanitizeFileName } from "@/lib/storage";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+const LICENSE_OPTIONS: { value: LicenseTemplate; label: string }[] = [
+  { value: "personal", label: "Personal Use" },
+  { value: "commercial", label: "Commercial Use" },
+];
+
+const STATUS_OPTIONS: { value: ListingStatus; label: string }[] = [
+  { value: "draft", label: "Draft" },
+  { value: "published", label: "Published" },
+  { value: "unpublished", label: "Unpublished (moderation)" },
+];
 
 /** Approved formats; labels match existing `datacuts.format` text values. */
 export const FORMAT_OPTIONS = [
@@ -318,17 +330,12 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
           <input value={records} onChange={(e) => setRecords(e.target.value)} />
         </label>
       </div>
-      <label>
-        License template *
-        <select
-          required
-          value={license}
-          onChange={(e) => setLicense(e.target.value as LicenseTemplate)}
-        >
-          <option value="personal">Personal Use</option>
-          <option value="commercial">Commercial Use</option>
-        </select>
-      </label>
+      <MenuSelect
+        label="License template *"
+        value={license}
+        options={LICENSE_OPTIONS}
+        onChange={setLicense}
+      />
       <p className="form-footnote">{blurb}</p>
       <label>
         Description *
@@ -339,14 +346,12 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
           onChange={(e) => setDescription(e.target.value)}
         />
       </label>
-      <label>
-        Status *
-        <select required value={status} onChange={(e) => setStatus(e.target.value as ListingStatus)}>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="unpublished">Unpublished (moderation)</option>
-        </select>
-      </label>
+      <MenuSelect
+        label="Status *"
+        value={status}
+        options={STATUS_OPTIONS}
+        onChange={setStatus}
+      />
       <label>
         Dataset file
         <input

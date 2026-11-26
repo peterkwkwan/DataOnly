@@ -237,7 +237,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 6px 4px 4px;
+  padding: 4px 10px 4px 4px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
@@ -3684,7 +3684,7 @@ footer button {
   gap: 12px;
   width: 100%;
   margin: 0;
-  padding: 12px 14px;
+  padding: 12px 18px 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-full);
   background: var(--paper);
@@ -3716,16 +3716,55 @@ footer button {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   margin: 0;
-  padding: 6px;
+  padding: 8px;
   list-style: none;
   background: #fff;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-1);
+  border: 1px solid rgba(217, 221, 213, 0.7);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(18, 30, 25, 0.14), 0 2px 8px rgba(18, 30, 25, 0.06);
   max-height: 280px;
   overflow: auto;
+}
+.menu-select--inline {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  min-width: 220px;
+  margin-bottom: 16px;
+}
+.menu-select--inline .industry-field-label {
+  white-space: nowrap;
+}
+.menu-select--inline .industry-select-trigger {
+  min-width: 200px;
+}
+.admin-reason-filter {
+  position: relative;
+  z-index: 5;
+}
+.buy-modal .menu-select {
+  margin-top: 14px;
+}
+.buy-modal .industry-select-menu {
+  z-index: 30;
+}
+.detail-meta-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.detail-meta-updated .listing-row-menu-trigger {
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+}
+.detail-meta .listing-row-menu-panel {
+  right: 0;
+  left: auto;
 }
 .industry-select-option {
   display: flex;

@@ -144,7 +144,6 @@ footer a {
   color: var(--muted);
 }
 
-.buy-modal label select,
 .buy-modal label textarea,
 .buy-modal label input {
   width: 100%;
@@ -154,6 +153,10 @@ footer a {
   font: inherit;
   color: inherit;
   background: var(--paper);
+}
+
+.buy-modal {
+  overflow: visible;
 }
 
 .detail-layout {

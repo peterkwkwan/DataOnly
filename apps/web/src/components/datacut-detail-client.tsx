@@ -192,7 +192,17 @@ export function DatacutDetailClient({
           <span>
             <Icon name="star" size={14} filled /> {cut.rating} ({cut.reviews})
           </span>
-          <span>{cut.updated}</span>
+          <span className="detail-meta-updated">
+            {cut.updated}
+            {!isOwner ? (
+              <ReportButton
+                variant="overflow"
+                targetType="datacut"
+                datacutId={cut.id}
+                creatorId={cut.creatorId}
+              />
+            ) : null}
+          </span>
         </div>
         <p>{cut.description}</p>
         <div className="detail-meta">
@@ -262,13 +272,6 @@ export function DatacutDetailClient({
             <Icon name="bookmark" size={18} filled={saved} />
             {saved ? "Saved" : "Save"}
           </button>
-          {!isOwner ? (
-            <ReportButton
-              targetType="datacut"
-              datacutId={cut.id}
-              creatorId={cut.creatorId}
-            />
-          ) : null}
         </div>
 
         {accessRevoked && !entitled ? (
