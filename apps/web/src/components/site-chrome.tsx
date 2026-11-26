@@ -109,6 +109,9 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                     <Link href="/admin/refunds" onClick={() => setMobileMenu(false)}>
                       Refunds
                     </Link>
+                    <Link href="/admin/reports" onClick={() => setMobileMenu(false)}>
+                      Reports
+                    </Link>
                   </>
                 ) : null}
                 <button

@@ -219,7 +219,9 @@ export default function AdminRefundsPage() {
         <p>
           Issue a refund for a purchase that has not been downloaded yet. After
           download, refunds are blocked. The buyer loses download access when
-          refunded. <Link href="/admin/verification">Verification queue</Link>
+          refunded. <Link href="/admin/verification">Verification</Link>
+          {" · "}
+          <Link href="/admin/reports">Reports</Link>
         </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}

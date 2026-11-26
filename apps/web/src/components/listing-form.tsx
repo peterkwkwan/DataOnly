@@ -344,6 +344,7 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         <select required value={status} onChange={(e) => setStatus(e.target.value as ListingStatus)}>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
+          <option value="unpublished">Unpublished (moderation)</option>
         </select>
       </label>
       <label>

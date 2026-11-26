@@ -56,6 +56,8 @@ export interface Creator {
   stripeChargesEnabled?: boolean;
   stripeDetailsSubmitted?: boolean;
   stripeOnboardingComplete?: boolean;
+  /** Admin force-hide while investigating a report */
+  hidden?: boolean;
 }
 
 export type EntitlementStatus = "pending" | "active" | "refunded" | "revoked";

@@ -136,6 +136,26 @@ footer a {
   margin-top: 22px;
 }
 
+.buy-modal label {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.buy-modal label select,
+.buy-modal label textarea,
+.buy-modal label input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--paper);
+}
+
 .detail-layout {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;

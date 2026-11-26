@@ -176,6 +176,8 @@ export default function AdminVerificationPage() {
         <p>
           Approve, request more info, or reject expert applications.{" "}
           <Link href="/admin/refunds">Refunds</Link>
+          {" · "}
+          <Link href="/admin/reports">Reports</Link>
         </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}

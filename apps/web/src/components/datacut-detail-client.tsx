@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Art } from "@/components/brand";
 import { BuyModal } from "@/components/buy-modal";
 import { Icon } from "@/components/icons";
+import { ReportButton } from "@/components/report-button";
 import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
 
@@ -261,6 +262,13 @@ export function DatacutDetailClient({
             <Icon name="bookmark" size={18} filled={saved} />
             {saved ? "Saved" : "Save"}
           </button>
+          {!isOwner ? (
+            <ReportButton
+              targetType="datacut"
+              datacutId={cut.id}
+              creatorId={cut.creatorId}
+            />
+          ) : null}
         </div>
 
         {accessRevoked && !entitled ? (

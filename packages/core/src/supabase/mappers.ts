@@ -1,4 +1,10 @@
 import type {
+  Report,
+  ReportReason,
+  ReportStatus,
+  ReportTargetType,
+} from "../reports";
+import type {
   Category,
   Creator,
   Datacut,
@@ -51,6 +57,24 @@ export type CreatorRow = {
   stripe_charges_enabled?: boolean | null;
   stripe_details_submitted?: boolean | null;
   stripe_onboarding_complete?: boolean | null;
+  hidden?: boolean | null;
+};
+
+export type ReportRow = {
+  id: string;
+  target_type: string;
+  datacut_id: number | null;
+  creator_id: string | null;
+  reason: string;
+  details: string;
+  status: string;
+  reporter_id: string | null;
+  reporter_email: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  outcome_note: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type EntitlementRow = {
@@ -179,6 +203,26 @@ export function mapCreator(row: CreatorRow): Creator {
     stripeChargesEnabled: !!row.stripe_charges_enabled,
     stripeDetailsSubmitted: !!row.stripe_details_submitted,
     stripeOnboardingComplete: !!row.stripe_onboarding_complete,
+    hidden: !!row.hidden,
+  };
+}
+
+export function mapReport(row: ReportRow): Report {
+  return {
+    id: row.id,
+    targetType: row.target_type as ReportTargetType,
+    datacutId: row.datacut_id == null ? null : Number(row.datacut_id),
+    creatorId: row.creator_id,
+    reason: row.reason as ReportReason,
+    details: row.details ?? "",
+    status: row.status as ReportStatus,
+    reporterId: row.reporter_id,
+    reporterEmail: row.reporter_email,
+    reviewedAt: row.reviewed_at,
+    reviewedBy: row.reviewed_by,
+    outcomeNote: row.outcome_note,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

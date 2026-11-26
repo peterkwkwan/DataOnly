@@ -17,6 +17,20 @@ export type {
   VerifiedSource,
   VerifiedSourcePlatform,
 } from "./types";
+export type {
+  Report,
+  ReportReason,
+  ReportStatus,
+  ReportTargetType,
+} from "./reports";
+export {
+  REPORT_REASON_LABELS,
+  REPORT_REASONS,
+  REPORT_STATUSES,
+  isReportReason,
+  isReportStatus,
+  validateReportInput,
+} from "./reports";
 export {
   LICENSE_SUMMARIES,
   LICENSE_TEMPLATE_VERSION,
@@ -45,6 +59,7 @@ export {
   mapDatacut,
   mapEntitlement,
   mapProfile,
+  mapReport,
   mapVerification,
 } from "./supabase/mappers";
 export type {
@@ -53,6 +68,7 @@ export type {
   DatacutRow,
   EntitlementRow,
   ProfileRow,
+  ReportRow,
   VerificationRow,
 } from "./supabase/mappers";
 export {

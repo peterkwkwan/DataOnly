@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
 import { Icon } from "@/components/icons";
+import { ReportButton } from "@/components/report-button";
 import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -55,9 +56,12 @@ export default async function CreatorStorefrontPage({ params }: Props) {
           <div className="large-avatar" style={{ background: creator.color }}>
             {creator.initials}
           </div>
-          <button type="button" className="follow-button">
-            Follow
-          </button>
+          <div className="store-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <button type="button" className="follow-button">
+              Follow
+            </button>
+            <ReportButton targetType="creator" creatorId={creator.id} />
+          </div>
           <h2 className="creator-title">
             {creator.name}
             {creator.verified ? <Icon name="shield" size={16} /> : null}

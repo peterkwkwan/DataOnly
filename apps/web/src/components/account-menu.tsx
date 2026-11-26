@@ -119,6 +119,19 @@ export function AccountMenu() {
                 <Icon name="arrow" size={16} />
                 Refunds
               </Link>
+              <Link
+                role="menuitem"
+                className={
+                  pathname.startsWith("/admin/reports")
+                    ? "account-menu-item active"
+                    : "account-menu-item"
+                }
+                href="/admin/reports"
+                onClick={() => setOpen(false)}
+              >
+                <Icon name="shield" size={16} />
+                Reports
+              </Link>
             </div>
           ) : null}
 
