@@ -40,7 +40,12 @@ export async function updateSession(request: NextRequest) {
   if (protectedPrefix && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/auth/sign-in";
-    redirectUrl.searchParams.set("next", path);
+    // /saved lands on ?tab=saved. Keep that return path; other paths stay pathname-only.
+    const next =
+      path === "/dashboard" && request.nextUrl.searchParams.get("tab") === "saved"
+        ? "/dashboard?tab=saved"
+        : path;
+    redirectUrl.searchParams.set("next", next);
     return NextResponse.redirect(redirectUrl);
   }
 

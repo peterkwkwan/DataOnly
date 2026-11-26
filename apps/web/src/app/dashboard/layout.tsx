@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!user) return;
     if (isTosRoute) return;
     if (hasAcceptedCreatorTos(profile)) return;
-    const next = encodeURIComponent(pathname || "/dashboard");
+    const next = encodeURIComponent(`${pathname || "/dashboard"}${window.location.search}`);
     router.replace(`/dashboard/tos?next=${next}`);
   }, [configured, isTosRoute, loading, pathname, profile, router, user]);
 

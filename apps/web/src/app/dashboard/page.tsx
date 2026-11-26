@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Verified } from "@/components/brand";
+import { DatacutCard } from "@/components/datacut-card";
 import { ListingRowMenu } from "@/components/listing-row-menu";
 import { useAuth } from "@/context/auth-context";
+import { useSaved } from "@/context/saved-context";
+import { catalog } from "@/lib/catalog";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -17,7 +21,35 @@ const LISTING_PILL_LABELS: Record<ListingStatus, string> = {
   unpublished: "UNPUBLISHED",
 };
 
-type DashboardTab = "listings" | "purchased";
+type DashboardTab = "listings" | "purchased" | "saved";
+
+function tabFromQuery(params: { get(name: string): string | null }): DashboardTab | null {
+  const value = params.get("tab");
+  if (value === "listings" || value === "purchased" || value === "saved") return value;
+  return null;
+}
+
+function defaultDashboardTab(
+  listings: { status?: string | null }[],
+  purchasedCount: number,
+): DashboardTab {
+  if (listings.some((row) => row.status === "published")) return "listings";
+  if (purchasedCount > 0) return "purchased";
+  return "listings";
+}
+
+function assertDefaultDashboardTab() {
+  const tab = defaultDashboardTab;
+  if (
+    tab([{ status: "published" }], 1) !== "listings" ||
+    tab([{ status: "draft" }, { status: "unpublished" }], 1) !== "purchased" ||
+    tab([{ status: "draft" }], 0) !== "listings" ||
+    tab([], 0) !== "listings"
+  ) {
+    throw new Error("defaultDashboardTab");
+  }
+}
+assertDefaultDashboardTab();
 
 type PurchasedCut = {
   entitlementId: string;
@@ -77,14 +109,18 @@ function mapPurchasedRow(row: EntitlementRow & { datacuts?: unknown }): Purchase
   };
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
+  const searchParams = useSearchParams();
   const { user, profile, loading, configured } = useAuth();
-  const [tab, setTab] = useState<DashboardTab>("listings");
+  const { savedIds, hydrated, syncError } = useSaved();
+  const queryTab = tabFromQuery(searchParams);
+  const tabLocked = useRef(queryTab !== null);
+  const [tab, setTab] = useState<DashboardTab>(queryTab ?? "listings");
   const [creator, setCreator] = useState<Creator | null>(null);
   const [listings, setListings] = useState<Datacut[]>([]);
   const [purchased, setPurchased] = useState<PurchasedCut[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [downloadId, setDownloadId] = useState<number | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -138,7 +174,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!configured || !user) return;
+    if (!configured || !user) {
+      setBusy(false);
+      return;
+    }
 
     let cancelled = false;
     async function load() {
@@ -170,12 +209,17 @@ export default function DashboardPage() {
         if (listError) throw listError;
         if (entitlementError) throw entitlementError;
         if (!cancelled) {
-          setListings(((data ?? []) as DatacutRow[]).map(mapDatacut));
-          setPurchased(
-            ((entitlementData ?? []) as (EntitlementRow & { datacuts?: unknown })[])
-              .map(mapPurchasedRow)
-              .filter((row): row is PurchasedCut => row !== null),
-          );
+          const nextListings = ((data ?? []) as DatacutRow[]).map(mapDatacut);
+          const nextPurchased = (
+            (entitlementData ?? []) as (EntitlementRow & { datacuts?: unknown })[]
+          )
+            .map(mapPurchasedRow)
+            .filter((row): row is PurchasedCut => row !== null);
+          setListings(nextListings);
+          setPurchased(nextPurchased);
+          if (!tabLocked.current) {
+            setTab(defaultDashboardTab(nextListings, nextPurchased.length));
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -193,6 +237,14 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [configured, loading, profile?.displayName, user]);
+
+  // Link visits update the query. Chip clicks use replaceState, so they do not.
+  useEffect(() => {
+    const next = tabFromQuery(searchParams);
+    if (!next) return;
+    tabLocked.current = true;
+    setTab(next);
+  }, [searchParams]);
 
   if (!isSupabaseConfigured()) {
     return (
@@ -220,13 +272,18 @@ export default function DashboardPage() {
     );
   }
 
+  const signInHref =
+    searchParams.get("tab") === "saved"
+      ? `/auth/sign-in?next=${encodeURIComponent("/dashboard?tab=saved")}`
+      : "/auth/sign-in?next=/dashboard";
+
   if (!user) {
     return (
       <section className="page-view">
         <div className="page-intro">
           <h1>Sign in required</h1>
           <p>Creator tools need an account.</p>
-          <Link className="primary-button" href="/auth/sign-in?next=/dashboard">
+          <Link className="primary-button" href={signInHref}>
             Sign in
           </Link>
         </div>
@@ -250,7 +307,7 @@ export default function DashboardPage() {
             <button type="button" className="primary-button" onClick={() => window.location.reload()}>
               Retry
             </button>
-            <Link className="text-button" href="/auth/sign-in?next=/dashboard">
+            <Link className="text-button" href={signInHref}>
               Sign in again
             </Link>
           </div>
@@ -258,6 +315,16 @@ export default function DashboardPage() {
       </section>
     );
   }
+
+  function selectTab(next: DashboardTab) {
+    tabLocked.current = true;
+    setTab(next);
+    window.history.replaceState(null, "", `/dashboard?tab=${next}`);
+  }
+
+  // Client catalog is mock (ids 1–4); those match supabase/seed.sql. Live-only
+  // listing ids still count in savedIds but may not resolve to a card here.
+  const savedCuts = catalog.getDatacuts().filter((cut) => savedIds.includes(cut.id));
 
   return (
     <section className="page-view dashboard-view">
@@ -283,7 +350,7 @@ export default function DashboardPage() {
           role="tab"
           aria-selected={tab === "listings"}
           className={tab === "listings" ? "active" : undefined}
-          onClick={() => setTab("listings")}
+          onClick={() => selectTab("listings")}
         >
           Listings
         </button>
@@ -292,9 +359,18 @@ export default function DashboardPage() {
           role="tab"
           aria-selected={tab === "purchased"}
           className={tab === "purchased" ? "active" : undefined}
-          onClick={() => setTab("purchased")}
+          onClick={() => selectTab("purchased")}
         >
           Purchased datacuts
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "saved"}
+          className={tab === "saved" ? "active" : undefined}
+          onClick={() => selectTab("saved")}
+        >
+          Saved datacuts
         </button>
       </div>
 
@@ -351,7 +427,9 @@ export default function DashboardPage() {
             )}
           </div>
         </>
-      ) : (
+      ) : null}
+
+      {tab === "purchased" ? (
         <>
           <div className="results-header dashboard-section-toolbar">
             <div>
@@ -397,7 +475,52 @@ export default function DashboardPage() {
             )}
           </div>
         </>
-      )}
+      ) : null}
+
+      {tab === "saved" ? (
+        <>
+          <div className="results-header dashboard-section-toolbar">
+            <div>
+              <h2>Saved datacuts</h2>
+              <span>{hydrated ? savedIds.length : 0}</span>
+            </div>
+          </div>
+          {syncError ? (
+            <p className="form-error" role="status" style={{ marginBottom: 16 }}>
+              {syncError}
+            </p>
+          ) : null}
+          {!hydrated ? null : savedCuts.length ? (
+            <div className="datacut-grid page-grid">
+              {savedCuts.map((cut) => (
+                <DatacutCard key={cut.id} cut={cut} />
+              ))}
+            </div>
+          ) : (
+            <div className="m-empty-state" style={{ marginTop: 40 }}>
+              <h3>Your library is empty</h3>
+              <p>Save datacuts to compare or purchase later.</p>
+              <Link href="/explore" className="primary-button" style={{ display: "inline-flex" }}>
+                Explore marketplace
+              </Link>
+            </div>
+          )}
+        </>
+      ) : null}
     </section>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="page-view">
+          <p className="empty-hint">Loading dashboard…</p>
+        </section>
+      }
+    >
+      <DashboardPageContent />
+    </Suspense>
   );
 }

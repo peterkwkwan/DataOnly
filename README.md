@@ -36,7 +36,7 @@ npm run dev:web
 
 With **no** Supabase env vars, the app uses `packages/core` mock data (same as Phase 1).
 
-Routes: `/` Home · `/explore` · `/creators` · `/datacuts/[slug]` · `/saved` · `/search` · `/auth/sign-in` · `/dashboard` · `/dashboard/tos` · `/admin/verification`
+Routes: `/` Home · `/explore` · `/creators` · `/datacuts/[slug]` · `/saved` redirects to `/dashboard?tab=saved` · `/search` · `/auth/sign-in` · `/dashboard` · `/dashboard/tos` · `/admin/verification`
 
 ## Run mobile
 

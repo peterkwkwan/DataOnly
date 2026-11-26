@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
 import { MobileShell } from "@/components/mobile-shell";
+
+function SavedNavActive({ onActive }: { onActive: (active: boolean) => void }) {
+  const searchParams = useSearchParams();
+  const active = searchParams.get("tab") === "saved";
+  useEffect(() => {
+    onActive(active);
+  }, [active, onActive]);
+  return null;
+}
 
 const NAV = [
   { href: "/", label: "Discover", match: (p: string) => p === "/" },
@@ -21,6 +30,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   const { savedIds, hydrated } = useSaved();
   const { user, profile, signOut, isAdmin, configured } = useAuth();
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [savedNavActive, setSavedNavActive] = useState(false);
   const accountEmail = profile?.email || user?.email || "";
   const accountName =
     profile?.displayName?.trim() || accountEmail.split("@")[0] || "Account";
@@ -47,7 +57,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             <Link className="primary-button small" href={configured ? "/dashboard" : "/auth/sign-in"}>
               Start selling <Icon name="arrow" size={16} />
             </Link>
-            <Link className="icon-button" href="/saved" aria-label="Saved">
+            <Link className="icon-button" href="/dashboard?tab=saved" aria-label="Saved">
               <Icon name="bookmark" size={19} />
               <span className="save-count">{hydrated ? savedIds.length : 0}</span>
             </Link>
@@ -84,7 +94,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 {item.label}
               </Link>
             ))}
-            <Link href="/saved" onClick={() => setMobileMenu(false)}>
+            <Link href="/dashboard?tab=saved" onClick={() => setMobileMenu(false)}>
               Saved
             </Link>
             <Link href="/search" onClick={() => setMobileMenu(false)}>
@@ -174,7 +184,13 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             <Icon name="users" />
             <span>Creators</span>
           </Link>
-          <Link href="/saved" className={pathname.startsWith("/saved") ? "active" : undefined}>
+          <Link
+            href="/dashboard?tab=saved"
+            className={savedNavActive ? "active" : undefined}
+          >
+            <Suspense fallback={null}>
+              <SavedNavActive onActive={setSavedNavActive} />
+            </Suspense>
             <Icon name="bookmark" />
             <span>Saved</span>
           </Link>
