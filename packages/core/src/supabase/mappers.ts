@@ -15,6 +15,8 @@ import type {
   ListingStatus,
   Profile,
   ProfileRole,
+  Purchase,
+  PurchaseStatus,
   VerificationApplication,
   VerificationStatus,
 } from "../types";
@@ -75,6 +77,21 @@ export type ReportRow = {
   outcome_note: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type PurchaseRow = {
+  id: string;
+  user_id: string;
+  datacut_id: number;
+  license: string;
+  amount_cents: number;
+  currency: string;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  status: string;
+  refund_requested_at?: string | null;
+  refund_request_note?: string | null;
+  created_at: string;
 };
 
 export type EntitlementRow = {
@@ -223,6 +240,25 @@ export function mapReport(row: ReportRow): Report {
     outcomeNote: row.outcome_note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+export function mapPurchase(row: PurchaseRow): Purchase {
+  const license = (row.license === "commercial" ? "commercial" : "personal") as LicenseTemplate;
+  const status: PurchaseStatus = row.status === "refunded" ? "refunded" : "paid";
+  return {
+    id: row.id,
+    userId: row.user_id,
+    datacutId: Number(row.datacut_id),
+    license,
+    amountCents: Number(row.amount_cents),
+    currency: row.currency,
+    stripeCheckoutSessionId: row.stripe_checkout_session_id,
+    stripePaymentIntentId: row.stripe_payment_intent_id,
+    status,
+    refundRequestedAt: row.refund_requested_at ?? null,
+    refundRequestNote: row.refund_request_note ?? null,
+    createdAt: row.created_at,
   };
 }
 

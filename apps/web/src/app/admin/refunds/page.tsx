@@ -1,21 +1,33 @@
 "use client";
 
+import {
+  isCurrentAccessCharge,
+  purchaseStatusPills,
+  refundEligibility,
+  type RefundEligibilityInput,
+} from "@dataonly/core";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-type RefundRow = {
+type AdminRow = {
   id: string;
   status: string;
   amountCents: number;
   currency: string;
   createdAt: string;
   paymentIntentId: string | null;
-  downloadedAt: string | null;
+  refundRequestedAt: string | null;
+  refundRequestNote: string | null;
+  datacutId: number;
+  userId: string;
   datacutTitle: string;
   buyerLabel: string;
+  entitlementStatus: string | null;
+  entitlementDownloadedAt: string | null;
+  entitlementPaymentIntentId: string | null;
 };
 
 const ALREADY_DOWNLOADED_MSG =
@@ -42,33 +54,47 @@ function formatWhen(iso: string): string {
   });
 }
 
+function oneRel<T>(rel: T | T[] | null | undefined): T | null {
+  if (!rel) return null;
+  return Array.isArray(rel) ? (rel[0] ?? null) : rel;
+}
+
+function rowInput(row: AdminRow): RefundEligibilityInput {
+  return {
+    purchaseStatus: row.status,
+    purchaseCreatedAt: row.createdAt,
+    paymentIntentId: row.paymentIntentId,
+    refundRequestedAt: row.refundRequestedAt,
+    isCurrentAccessCharge: isCurrentAccessCharge(row.paymentIntentId, row.entitlementPaymentIntentId),
+    entitlementStatus: row.entitlementStatus,
+    entitlementDownloadedAt: row.entitlementDownloadedAt,
+  };
+}
+
 export default function AdminRefundsPage() {
   const { user, isAdmin, loading } = useAuth();
-  const [items, setItems] = useState<RefundRow[]>([]);
+  const [items, setItems] = useState<AdminRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<{ id: string; action: "refund" | "dismiss" } | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const loadPurchases = useCallback(async () => {
     const supabase = createBrowserSupabaseClient();
-    // Prefer join to profiles for buyer label; fall back if embed isn't available.
-    let data: Record<string, unknown>[] | null = null;
+    const purchaseSelect =
+      "id, status, amount_cents, currency, created_at, refund_requested_at, refund_request_note, stripe_payment_intent_id, user_id, datacut_id, datacuts(title)";
     const withProfiles = await supabase
-      .from("entitlements")
-      .select(
-        "id, status, amount_cents, currency, created_at, downloaded_at, stripe_payment_intent_id, user_id, datacut_id, datacuts(title), profiles(email, display_name)",
-      )
-      .in("status", ["active", "pending", "refunded"])
+      .from("purchases")
+      .select(`${purchaseSelect}, profiles(email, display_name)`)
+      .order("refund_requested_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(50);
 
+    let data: Record<string, unknown>[] | null = null;
     if (withProfiles.error) {
       const withoutProfiles = await supabase
-        .from("entitlements")
-        .select(
-          "id, status, amount_cents, currency, created_at, downloaded_at, stripe_payment_intent_id, user_id, datacut_id, datacuts(title)",
-        )
-        .in("status", ["active", "pending", "refunded"])
+        .from("purchases")
+        .select(purchaseSelect)
+        .order("refund_requested_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(50);
       if (withoutProfiles.error) throw withoutProfiles.error;
@@ -77,26 +103,45 @@ export default function AdminRefundsPage() {
       data = (withProfiles.data ?? []) as Record<string, unknown>[];
     }
 
+    const userIds = [
+      ...new Set(
+        (data ?? [])
+          .map((row) => (typeof row.user_id === "string" ? row.user_id : ""))
+          .filter(Boolean),
+      ),
+    ];
+    const entitlements = new Map<
+      string,
+      { status: string; downloadedAt: string | null; paymentIntentId: string | null }
+    >();
+    if (userIds.length > 0) {
+      const { data: entRows, error: entError } = await supabase
+        .from("entitlements")
+        .select("user_id, datacut_id, status, downloaded_at, stripe_payment_intent_id")
+        .in("user_id", userIds);
+      if (entError) throw entError;
+      for (const ent of entRows ?? []) {
+        entitlements.set(`${ent.user_id}:${ent.datacut_id}`, {
+          status: String(ent.status),
+          downloadedAt: typeof ent.downloaded_at === "string" ? ent.downloaded_at : null,
+          paymentIntentId:
+            typeof ent.stripe_payment_intent_id === "string" ? ent.stripe_payment_intent_id : null,
+        });
+      }
+    }
+
     setItems(
       (data ?? []).map((row) => {
-        const cutRel = row.datacuts as
-          | { title?: string }
-          | { title?: string }[]
-          | null
-          | undefined;
-        const cut = Array.isArray(cutRel) ? cutRel[0] : cutRel;
-        const profileRel = row.profiles as
-          | { email?: string | null; display_name?: string | null }
-          | { email?: string | null; display_name?: string | null }[]
-          | null
-          | undefined;
-        const profile = Array.isArray(profileRel) ? profileRel[0] : profileRel;
+        const cut = oneRel(row.datacuts as { title?: string } | { title?: string }[] | null);
+        const profile = oneRel(
+          row.profiles as
+            | { email?: string | null; display_name?: string | null }
+            | { email?: string | null; display_name?: string | null }[]
+            | null,
+        );
         const userId = typeof row.user_id === "string" ? row.user_id : "";
-        const buyerLabel =
-          profile?.display_name?.trim() ||
-          profile?.email?.trim() ||
-          (userId ? `${userId.slice(0, 8)}…` : "Buyer");
-
+        const datacutId = Number(row.datacut_id);
+        const ent = entitlements.get(`${userId}:${datacutId}`) ?? null;
         return {
           id: String(row.id),
           status: String(row.status),
@@ -104,13 +149,21 @@ export default function AdminRefundsPage() {
           currency: String(row.currency || "usd"),
           createdAt: String(row.created_at),
           paymentIntentId:
-            typeof row.stripe_payment_intent_id === "string"
-              ? row.stripe_payment_intent_id
-              : null,
-          downloadedAt:
-            typeof row.downloaded_at === "string" ? row.downloaded_at : null,
-          datacutTitle: cut?.title?.trim() || `Datacut #${row.datacut_id}`,
-          buyerLabel,
+            typeof row.stripe_payment_intent_id === "string" ? row.stripe_payment_intent_id : null,
+          refundRequestedAt:
+            typeof row.refund_requested_at === "string" ? row.refund_requested_at : null,
+          refundRequestNote:
+            typeof row.refund_request_note === "string" ? row.refund_request_note : null,
+          datacutId,
+          userId,
+          datacutTitle: cut?.title?.trim() || `Datacut #${datacutId}`,
+          buyerLabel:
+            profile?.display_name?.trim() ||
+            profile?.email?.trim() ||
+            (userId ? `${userId.slice(0, 8)}…` : "Buyer"),
+          entitlementStatus: ent?.status ?? null,
+          entitlementDownloadedAt: ent?.downloadedAt ?? null,
+          entitlementPaymentIntentId: ent?.paymentIntentId ?? null,
         };
       }),
     );
@@ -123,49 +176,73 @@ export default function AdminRefundsPage() {
     );
   }, [isAdmin, loading, loadPurchases, user]);
 
-  async function refundPurchase(row: RefundRow) {
-    if (row.status === "refunded") return;
-    if (row.downloadedAt) {
-      setError(ALREADY_DOWNLOADED_MSG);
-      setNote(null);
-      return;
-    }
+  async function refundPurchase(row: AdminRow) {
+    const input = rowInput(row);
+    const current = input.isCurrentAccessCharge;
     if (
       !window.confirm(
-        `Refund “${row.datacutTitle}” for ${row.buyerLabel}? The buyer will lose download access.`,
+        current
+          ? `Refund “${row.datacutTitle}” for ${row.buyerLabel}? The buyer will lose download access.`
+          : `Refund “${row.datacutTitle}” for ${row.buyerLabel}? This refunds that charge. Their current download access stays.`,
       )
     ) {
       return;
     }
-    setBusyId(row.id);
+    setBusy({ id: row.id, action: "refund" });
     setError(null);
     setNote(null);
     try {
       const res = await fetch("/api/stripe/refund", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entitlementId: row.id }),
+        body: JSON.stringify({ purchaseId: row.id }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
         error?: string;
         alreadyRefunded?: boolean;
-        status?: string;
-        code?: string;
       };
-      if (!res.ok) {
-        throw new Error(data.error ?? "Refund failed");
-      }
+      if (!res.ok) throw new Error(data.error ?? "Refund failed");
       setNote(
         data.alreadyRefunded
           ? "Already refunded — access stays revoked."
-          : "Refund issued. Buyer download access is revoked.",
+          : current
+            ? "Refund issued. Buyer download access is revoked."
+            : "Refund issued.",
       );
       await loadPurchases();
     } catch (err) {
       setError(formatClientError(err, "Couldn't issue the refund"));
     } finally {
-      setBusyId(null);
+      setBusy(null);
+    }
+  }
+
+  async function dismissRequest(row: AdminRow) {
+    if (
+      !window.confirm(
+        `Dismiss the refund request for “${row.datacutTitle}”? This does not refund the payment.`,
+      )
+    ) {
+      return;
+    }
+    setBusy({ id: row.id, action: "dismiss" });
+    setError(null);
+    setNote(null);
+    try {
+      const res = await fetch("/api/refund-requests", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchaseId: row.id }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Couldn't dismiss the request");
+      setNote("Request dismissed.");
+      await loadPurchases();
+    } catch (err) {
+      setError(formatClientError(err, "Couldn't dismiss the request"));
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -217,9 +294,10 @@ export default function AdminRefundsPage() {
         <span className="kicker">Admin</span>
         <h1>Refunds</h1>
         <p>
-          Issue a refund for a purchase that has not been downloaded yet. After
-          download, refunds are blocked. The buyer loses download access when
-          refunded.
+          Buyers request a refund from Account → Purchases. You issue it here. Each Checkout is
+          its own line. Refunding the line that currently pays for access removes download access.
+          A downloaded line can&apos;t be refunded. A request older than 14 days can still be
+          refunded here.
         </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
@@ -229,54 +307,77 @@ export default function AdminRefundsPage() {
           <p className="empty-hint">No purchases yet.</p>
         ) : (
           items.map((row) => {
-            const refunded = row.status === "refunded";
-            const downloaded = Boolean(row.downloadedAt);
-            const canRefund = !refunded && !downloaded && Boolean(row.paymentIntentId);
+            const input = rowInput(row);
+            const gate = refundEligibility(input);
+            const downloadBlocked = !gate.ok && gate.code === "downloaded";
+            const windowProbe = refundEligibility({ ...input, refundRequestedAt: null });
+            const requested = Boolean(row.refundRequestedAt) && row.status !== "refunded";
+            const outsideHint =
+              requested &&
+              !downloadBlocked &&
+              windowProbe.ok &&
+              windowProbe.outsideWindow;
+            const canRefund = gate.ok || (!gate.ok && gate.code === "already_requested");
+            const pills = purchaseStatusPills({
+              purchaseStatus: row.status,
+              refundRequestedAt: row.refundRequestedAt,
+              isCurrentAccessCharge: input.isCurrentAccessCharge,
+              entitlementStatus: input.entitlementStatus,
+            });
+            const rowBusy = busy?.id === row.id;
             return (
               <article key={row.id} className="listing-row">
                 <div>
                   <b>{row.datacutTitle}</b>
-                  <span>
-                    <span
-                      className={`status-pill ${
-                        refunded ? "status-pill--revoked" : "status-pill--approved"
-                      }`}
-                    >
-                      {refunded ? "REFUNDED" : "ACTIVE"}
-                    </span>
-                    {downloaded && !refunded ? (
-                      <>
-                        {" · "}
-                        <span className="status-pill status-pill--under_review">DOWNLOADED</span>
-                      </>
+                  <span className="listing-row-meta">
+                    {pills.map((pill) => (
+                      <span key={pill.label} className={`status-pill status-pill--${pill.modifier}`}>
+                        {pill.label}
+                      </span>
+                    ))}
+                    {downloadBlocked ? (
+                      <span className="status-pill status-pill--under_review">DOWNLOADED</span>
                     ) : null}
-                    {" · "}
-                    {formatMoney(row.amountCents, row.currency)} · {row.buyerLabel} ·{" "}
-                    {formatWhen(row.createdAt)}
+                    <span className="listing-row-meta-detail">
+                      {formatMoney(row.amountCents, row.currency)} · {row.buyerLabel} ·{" "}
+                      {formatWhen(row.createdAt)}
+                    </span>
                   </span>
+                  {row.refundRequestNote ? <p>{row.refundRequestNote}</p> : null}
+                  {outsideHint ? <p>Outside the 14-day window</p> : null}
                 </div>
                 <div className="listing-row-actions">
-                  {refunded ? (
-                    <span className="empty-hint">Access revoked</span>
-                  ) : downloaded ? (
+                  {downloadBlocked ? (
                     <span className="empty-hint" title={ALREADY_DOWNLOADED_MSG}>
                       Already downloaded — refund unavailable
                     </span>
-                  ) : (
+                  ) : null}
+                  {requested ? (
                     <button
                       type="button"
                       className="text-button"
-                      disabled={busyId === row.id || !canRefund}
-                      onClick={() => void refundPurchase(row)}
-                      title={
-                        row.paymentIntentId
-                          ? "Refund this purchase"
-                          : "No payment on file for this purchase"
-                      }
+                      disabled={rowBusy}
+                      onClick={() => void dismissRequest(row)}
                     >
-                      {busyId === row.id ? "Refunding…" : "Refund"}
+                      {rowBusy && busy?.action === "dismiss" ? "Dismissing…" : "Dismiss request"}
                     </button>
-                  )}
+                  ) : null}
+                  {canRefund ? (
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={rowBusy}
+                      onClick={() => void refundPurchase(row)}
+                    >
+                      {rowBusy && busy?.action === "refund" ? "Refunding…" : "Refund"}
+                    </button>
+                  ) : !downloadBlocked && row.status === "refunded" && input.isCurrentAccessCharge ? (
+                    <span className="empty-hint">Access revoked</span>
+                  ) : !downloadBlocked && !gate.ok && gate.code === "revoked" ? (
+                    <span className="empty-hint">Access revoked</span>
+                  ) : !downloadBlocked && !gate.ok && gate.code === "missing_payment" ? (
+                    <span className="empty-hint">No payment on file for this purchase</span>
+                  ) : null}
                 </div>
               </article>
             );

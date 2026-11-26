@@ -3134,7 +3134,8 @@ footer button {
   justify-items: stretch;
 }
 .auth-card label,
-.listing-form label {
+.listing-form label,
+.payment-method-form label {
   display: grid;
   gap: 8px;
   width: 100%;
@@ -3149,7 +3150,8 @@ footer button {
 .auth-card textarea,
 .listing-form input,
 .listing-form select,
-.listing-form textarea {
+.listing-form textarea,
+.payment-method-form input {
   display: block;
   width: 100%;
   min-width: 0;
@@ -3238,6 +3240,11 @@ footer button {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+.payment-method-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
 }
 .dashboard-actions {
   display: flex;

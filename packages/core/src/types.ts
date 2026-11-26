@@ -62,6 +62,8 @@ export interface Creator {
 
 export type EntitlementStatus = "pending" | "active" | "refunded" | "revoked";
 
+export type PurchaseStatus = "paid" | "refunded";
+
 export interface Entitlement {
   id: string;
   userId: string;
@@ -79,6 +81,22 @@ export interface Entitlement {
   downloadedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One paid Checkout. Access stays on Entitlement. */
+export interface Purchase {
+  id: string;
+  userId: string;
+  datacutId: number;
+  license: LicenseTemplate;
+  amountCents: number;
+  currency: string;
+  stripeCheckoutSessionId: string | null;
+  stripePaymentIntentId: string | null;
+  status: PurchaseStatus;
+  refundRequestedAt: string | null;
+  refundRequestNote: string | null;
+  createdAt: string;
 }
 
 export interface Datacut {

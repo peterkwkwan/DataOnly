@@ -1,26 +1,32 @@
+import {
+  isCurrentAccessCharge,
+  refundBuyerCopy,
+  refundEligibility,
+  type RefundEligibilityInput,
+} from "@dataonly/core";
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { isStripeConfigured } from "@/lib/stripe/config";
-import {
-  markEntitlementRefundedById,
-  markEntitlementRefundedByPaymentIntent,
-} from "@/lib/stripe/entitlements";
+import { markEntitlementRefundedByPaymentIntent } from "@/lib/stripe/entitlements";
 import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 type Body = {
-  entitlementId?: string;
+  purchaseId?: string;
 };
 
 const REFUND_UNAVAILABLE =
   "Refunds aren't available right now. Please try again later.";
 
+const ALREADY_DOWNLOADED =
+  "This purchase can't be refunded because the buyer already downloaded the datacut.";
+
 /**
- * Admin refund: Stripe refunds.create on the Checkout PaymentIntent, then mark
- * the entitlement refunded. Destination charges reverse the transfer + fee.
- * Webhook charge.refunded / payment_intent.refunded also sync status (idempotent).
+ * Admin refund: Stripe refunds.create on that ledger row's PaymentIntent,
+ * then mark the ledger refunded. The entitlement flips only when this payment
+ * is still the current access charge.
  */
 export async function POST(request: Request) {
   if (!isStripeConfigured()) {
@@ -43,10 +49,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const entitlementId = body.entitlementId?.trim() || "";
-  if (!entitlementId) {
+  const purchaseId = body.purchaseId?.trim() || "";
+  if (!purchaseId) {
     return NextResponse.json(
-      { error: "entitlementId is required", code: "entitlement_required" },
+      { error: "purchaseId is required", code: "purchase_required" },
       { status: 400 },
     );
   }
@@ -73,72 +79,85 @@ export async function POST(request: Request) {
   }
 
   const admin = createServiceSupabaseClient();
+  const { data: purchase, error: purchaseError } = await admin
+    .from("purchases")
+    .select(
+      "id, status, stripe_payment_intent_id, user_id, datacut_id, created_at, refund_requested_at",
+    )
+    .eq("id", purchaseId)
+    .maybeSingle();
+
+  if (purchaseError) {
+    return NextResponse.json({ error: purchaseError.message }, { status: 500 });
+  }
+  if (!purchase) {
+    return NextResponse.json({ error: "Purchase not found", code: "not_found" }, { status: 404 });
+  }
+
+  if (purchase.status === "refunded") {
+    return NextResponse.json({
+      ok: true,
+      alreadyRefunded: true,
+      purchaseId: purchase.id,
+      status: "refunded",
+    });
+  }
+
   const { data: entitlement, error: entError } = await admin
     .from("entitlements")
-    .select(
-      "id, status, stripe_payment_intent_id, user_id, datacut_id, amount_cents, currency, downloaded_at",
-    )
-    .eq("id", entitlementId)
+    .select("status, downloaded_at, stripe_payment_intent_id")
+    .eq("user_id", purchase.user_id)
+    .eq("datacut_id", purchase.datacut_id)
     .maybeSingle();
 
   if (entError) {
     return NextResponse.json({ error: entError.message }, { status: 500 });
   }
-  if (!entitlement) {
-    return NextResponse.json({ error: "Purchase not found", code: "not_found" }, { status: 404 });
-  }
 
-  if (entitlement.status === "refunded" || entitlement.status === "revoked") {
-    return NextResponse.json({
-      ok: true,
-      alreadyRefunded: true,
-      entitlementId: entitlement.id,
-      status: entitlement.status,
-    });
-  }
+  const current = isCurrentAccessCharge(
+    purchase.stripe_payment_intent_id,
+    entitlement?.stripe_payment_intent_id,
+  );
+  const eligibilityInput: RefundEligibilityInput = {
+    purchaseStatus: purchase.status,
+    purchaseCreatedAt: purchase.created_at,
+    paymentIntentId: purchase.stripe_payment_intent_id,
+    refundRequestedAt: purchase.refund_requested_at,
+    isCurrentAccessCharge: current,
+    entitlementStatus: entitlement?.status ?? null,
+    entitlementDownloadedAt: entitlement?.downloaded_at ?? null,
+  };
+  const eligibility = refundEligibility(eligibilityInput);
 
-  if (entitlement.downloaded_at) {
+  if (!eligibility.ok && eligibility.code !== "already_requested") {
+    if (eligibility.code === "downloaded") {
+      return NextResponse.json(
+        {
+          error: ALREADY_DOWNLOADED,
+          code: "already_downloaded",
+          downloadedAt: entitlement?.downloaded_at ?? null,
+        },
+        { status: 409 },
+      );
+    }
+    const copy = refundBuyerCopy(eligibilityInput);
     return NextResponse.json(
-      {
-        error:
-          "This purchase can't be refunded because the buyer already downloaded the datacut.",
-        code: "already_downloaded",
-        downloadedAt: entitlement.downloaded_at,
-      },
+      { error: copy.paragraphs.join(" "), code: eligibility.code },
       { status: 409 },
     );
   }
 
-  if (entitlement.status !== "active" && entitlement.status !== "pending") {
-    return NextResponse.json(
-      { error: "This purchase can't be refunded", code: "not_refundable" },
-      { status: 409 },
-    );
-  }
-
-  const paymentIntentId = entitlement.stripe_payment_intent_id?.trim() || "";
-  if (!paymentIntentId) {
-    return NextResponse.json(
-      {
-        error: "This purchase has no payment to refund",
-        code: "missing_payment_intent",
-      },
-      { status: 409 },
-    );
-  }
-
+  const paymentIntentId = purchase.stripe_payment_intent_id?.trim() || "";
   const stripe = getStripe();
   try {
     await stripe.refunds.create({
       payment_intent: paymentIntentId,
-      // Destination charge: claw back transfer to creator + platform fee.
       reverse_transfer: true,
       refund_application_fee: true,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";
-    console.error("[stripe refund]", entitlementId, paymentIntentId, message);
-    // Already-refunded in Stripe → still mark entitlement locally.
+    console.error("[stripe refund]", purchaseId, paymentIntentId, message);
     const already =
       /already.?refunded/i.test(message) || /has already been refunded/i.test(message);
     if (!already) {
@@ -150,20 +169,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const marked = await markEntitlementRefundedById(entitlement.id);
-    // Belt-and-suspenders if id path raced with webhook keyed by PI.
-    if (paymentIntentId) {
-      await markEntitlementRefundedByPaymentIntent(paymentIntentId);
-    }
+    await markEntitlementRefundedByPaymentIntent(paymentIntentId);
     return NextResponse.json({
       ok: true,
-      entitlementId: marked.id,
-      status: marked.status,
+      purchaseId: purchase.id,
+      status: "refunded",
       paymentIntentId,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not update access";
-    console.error("[stripe refund] entitlement mark failed", entitlementId, message);
+    console.error("[stripe refund] mark failed", purchaseId, message);
     return NextResponse.json(
       {
         error:

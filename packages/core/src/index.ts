@@ -6,6 +6,8 @@ export type {
   DatacutWriteInput,
   Entitlement,
   EntitlementStatus,
+  Purchase,
+  PurchaseStatus,
   IndustryIconName,
   LicenseTemplate,
   ListingStatus,
@@ -59,6 +61,7 @@ export {
   mapDatacut,
   mapEntitlement,
   mapProfile,
+  mapPurchase,
   mapReport,
   mapVerification,
 } from "./supabase/mappers";
@@ -68,6 +71,7 @@ export type {
   DatacutRow,
   EntitlementRow,
   ProfileRow,
+  PurchaseRow,
   ReportRow,
   VerificationRow,
 } from "./supabase/mappers";
@@ -92,3 +96,16 @@ export {
   hasAcceptedCreatorTos,
 } from "./creator-tos";
 export type { CreatorTosSection } from "./creator-tos";
+export {
+  REFUND_WINDOW_MS,
+  isCurrentAccessCharge,
+  purchaseStatusPills,
+  refundBuyerCopy,
+  refundEligibility,
+} from "./refund-eligibility";
+export type {
+  PurchaseStatusPill,
+  RefundEligibilityCode,
+  RefundEligibilityInput,
+  RefundEligibilityResult,
+} from "./refund-eligibility";
