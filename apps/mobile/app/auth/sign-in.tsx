@@ -32,7 +32,6 @@ export default function SignInScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams<{
     next?: string;
-    code?: string;
     error?: string;
     error_description?: string;
   }>();
@@ -50,57 +49,24 @@ export default function SignInScreen() {
     if (user) router.replace(next as "/verification");
   }, [next, user]);
 
-  // Cold / deep-link return: Supabase may open the app with ?code= on this screen.
+  // OAuth error query params on deep-link return (session itself: AuthSession + AuthContext Linking).
   useEffect(() => {
     if (!isMobileSupabaseConfigured()) return;
 
     const errorParam = typeof params.error === "string" ? params.error : null;
     const errorDescription =
       typeof params.error_description === "string" ? params.error_description : null;
-    if (errorParam) {
-      const key = `err:${errorParam}:${errorDescription ?? ""}`;
-      if (oauthHandled.current === key) return;
-      oauthHandled.current = key;
-      setError(
-        errorParam === "access_denied"
-          ? "Google sign-in was cancelled."
-          : errorDescription?.replace(/\+/g, " ").trim() ||
-              "Google sign-in didn't complete. Try again, or use email instead.",
-      );
-      return;
-    }
-
-    const code = typeof params.code === "string" ? params.code : null;
-    if (!code) return;
-    if (oauthHandled.current === code) return;
-    oauthHandled.current = code;
-
-    let cancelled = false;
-    setBusy(true);
-    setError(null);
-    void (async () => {
-      try {
-        const supabase = createMobileSupabaseClient();
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) throw exchangeError;
-        if (!cancelled) router.replace(next as "/verification");
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Google sign-in didn't complete. Try again, or use email instead.",
-          );
-        }
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [next, params.code, params.error, params.error_description]);
+    if (!errorParam) return;
+    const key = `err:${errorParam}:${errorDescription ?? ""}`;
+    if (oauthHandled.current === key) return;
+    oauthHandled.current = key;
+    setError(
+      errorParam === "access_denied"
+        ? "Google sign-in was cancelled."
+        : errorDescription?.replace(/\+/g, " ").trim() ||
+            "Google sign-in didn't complete. Try again, or use email instead.",
+    );
+  }, [params.error, params.error_description]);
 
   function switchIntent(nextIntent: PasswordIntent) {
     setPasswordIntent(nextIntent);

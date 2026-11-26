@@ -1,6 +1,7 @@
 import type { Profile, ProfileRole } from "@dataonly/core";
 import { mapProfile, type ProfileRow } from "@dataonly/core";
 import type { Session, User } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
 import {
   createContext,
   useCallback,
@@ -11,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { createSessionFromUrl } from "@/lib/oauth";
 import { createMobileSupabaseClient, isMobileSupabaseConfigured } from "@/lib/supabase";
 
 type AuthContextValue = {
@@ -73,9 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Fudget pattern: catch OAuth deep links that AuthSession may miss.
+    const linkingSub = Linking.addEventListener("url", ({ url }) => {
+      void createSessionFromUrl(url).catch((err) => {
+        console.warn("[auth] deep link session failed", err);
+      });
+    });
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      linkingSub.remove();
     };
   }, [configured, loadProfile]);
 

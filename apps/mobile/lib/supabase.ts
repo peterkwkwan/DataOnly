@@ -34,8 +34,7 @@ export function createMobileSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      // PKCE: AuthSession returns ?code=; verifier lives in AsyncStorage.
-      flowType: "pkce",
+      // Default (implicit) like Fudget — AuthSession returns access/refresh tokens.
     },
   });
   return client;
