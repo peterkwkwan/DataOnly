@@ -67,6 +67,7 @@ export default async function CreatorStorefrontPage({ params }: Props) {
             {creator.verified ? <Icon name="shield" size={16} /> : null}
           </h2>
           <p>{creator.specialty} · Steam-like shop for expert-curated datacuts.</p>
+          {creator.bio.trim() ? <p>{creator.bio}</p> : null}
           <div className="store-stats">
             <span>
               <b>{creator.cuts}</b> Datacuts

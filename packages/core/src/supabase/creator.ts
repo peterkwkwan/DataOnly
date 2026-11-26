@@ -11,7 +11,7 @@ function slugify(value: string) {
     .slice(0, 48);
 }
 
-function initialsFrom(name: string) {
+export function initialsFrom(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "??";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();

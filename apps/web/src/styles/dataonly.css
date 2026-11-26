@@ -3135,7 +3135,8 @@ footer button {
 }
 .auth-card label,
 .listing-form label,
-.payment-method-form label {
+.payment-method-form label,
+.account-profile-form label {
   display: grid;
   gap: 8px;
   width: 100%;
@@ -3151,7 +3152,9 @@ footer button {
 .listing-form input,
 .listing-form select,
 .listing-form textarea,
-.payment-method-form input {
+.payment-method-form input,
+.account-profile-form input,
+.account-profile-form textarea {
   display: block;
   width: 100%;
   min-width: 0;
@@ -3241,10 +3244,18 @@ footer button {
   color: var(--muted);
   font-size: 13px;
 }
-.payment-method-form {
+.payment-method-form,
+.account-profile-form {
   display: grid;
   gap: 12px;
   margin-top: 8px;
+}
+/* large-avatar is absolute on the store card; keep this preview in the form flow */
+.account-profile-form .large-avatar {
+  position: static;
+}
+.account-profile-form .link-button {
+  justify-self: start;
 }
 .dashboard-actions {
   display: flex;

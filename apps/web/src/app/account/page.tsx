@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { AccountProfile } from "@/components/account-profile";
 import { AccountPurchases, PurchaseHistory } from "@/components/account-purchases";
 import { Verified } from "@/components/brand";
 import { useAuth } from "@/context/auth-context";
@@ -29,7 +30,7 @@ const VIEW_APPLICATION_STATUSES = new Set<VerificationStatus>([
   "rejected",
 ]);
 
-type AccountTab = "account" | "purchases" | "payment";
+type AccountTab = "account" | "profile" | "purchases" | "payment";
 
 function verificationStatusPill(
   creator: Creator | null,
@@ -57,6 +58,7 @@ function tabFromSearch(params: { get(name: string): string | null }): AccountTab
     return "payment";
   }
   if (params.get("tab") === "purchases") return "purchases";
+  if (params.get("tab") === "profile") return "profile";
   return "account";
 }
 
@@ -69,6 +71,7 @@ function accountPath(params: { get(name: string): string | null }): string {
 }
 
 function introFor(tab: AccountTab): string {
+  if (tab === "profile") return "Name, avatar, and bio on your public storefront.";
   if (tab === "payment") return "Payouts and a payment method.";
   if (tab === "purchases") return "Your purchase history.";
   return "Verification for your seller account.";
@@ -207,6 +210,15 @@ function AccountPageContent() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "profile"}
+          className={tab === "profile" ? "active" : undefined}
+          onClick={() => selectTab("profile")}
+        >
+          Profile
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "purchases"}
           className={tab === "purchases" ? "active" : undefined}
           onClick={() => selectTab("purchases")}
@@ -260,6 +272,16 @@ function AccountPageContent() {
           </section>
         )
       ) : null}
+
+      <div hidden={tab !== "profile"}>
+        {creator ? (
+          <AccountProfile userId={user.id} creator={creator} onSaved={setCreator} />
+        ) : accountBusy ? (
+          <p className="empty-hint">Loading account…</p>
+        ) : (
+          <p className="form-error">{error ?? "Failed to load account"}</p>
+        )}
+      </div>
 
       <div hidden={tab !== "purchases"}>
         <PurchaseHistory userId={user.id} />

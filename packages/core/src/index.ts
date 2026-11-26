@@ -86,7 +86,7 @@ export {
   VERIFIED_SOURCE_PLATFORMS,
 } from "./verified-sources";
 export type { VerifiedSourcesValidation } from "./verified-sources";
-export { ensureCreatorForUser } from "./supabase/creator";
+export { ensureCreatorForUser, initialsFrom } from "./supabase/creator";
 export {
   CREATOR_TOS_ACCEPT_LABEL,
   CREATOR_TOS_DRAFT_NOTICE,
