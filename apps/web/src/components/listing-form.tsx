@@ -248,16 +248,12 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         Slug *
         <input required value={slug} onChange={(e) => setSlug(slugify(e.target.value))} />
       </label>
-      <label>
-        Category *
-        <select required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <MenuSelect
+        label="Category *"
+        value={categoryId}
+        options={categories.map((c) => ({ value: c.id, label: c.name }))}
+        onChange={setCategoryId}
+      />
       <div className="form-grid">
         <label>
           Price (USD) *
