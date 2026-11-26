@@ -8,19 +8,24 @@ import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type {
-  Creator,
-  Datacut,
-  ListingStatus,
-  VerificationApplication,
-  VerificationStatus,
-} from "@dataonly/core";
-import { mapDatacut, mapVerification, type DatacutRow, type VerificationRow } from "@dataonly/core";
+import type { Creator, Datacut, ListingStatus } from "@dataonly/core";
+import { mapDatacut, mapEntitlement, type DatacutRow, type EntitlementRow } from "@dataonly/core";
 
 const LISTING_PILL_LABELS: Record<ListingStatus, string> = {
   draft: "DRAFT",
   published: "PUBLISHED",
   unpublished: "UNPUBLISHED",
+};
+
+type DashboardTab = "listings" | "purchased";
+
+type PurchasedCut = {
+  entitlementId: string;
+  datacutId: number;
+  slug: string;
+  title: string;
+  license: string;
+  hasFile: boolean;
 };
 
 function listingStatusPill(status: string | undefined | null): { label: string; status: string } {
@@ -39,191 +44,50 @@ function listingStatusPillClass(status: string): string {
   return "status-pill status-pill--submitted";
 }
 
-const VERIFICATION_PILL_LABELS: Record<VerificationStatus, string> = {
-  draft: "DRAFT",
-  submitted: "SUBMITTED",
-  under_review: "UNDER REVIEW",
-  needs_more_info: "ADDITIONAL INFO REQUESTED",
-  approved: "APPROVED",
-  rejected: "REJECTED",
-  revoked: "REVOKED",
-};
-
-type PayoutStatus =
-  | "unavailable"
-  | "not_started"
-  | "incomplete"
-  | "pending"
-  | "active"
-  | "needs_update"
-  | "error";
-
-const PAYOUT_PILL_LABELS: Record<PayoutStatus, string> = {
-  unavailable: "UNAVAILABLE",
-  not_started: "NOT STARTED",
-  incomplete: "INCOMPLETE",
-  pending: "PENDING",
-  active: "ACTIVE",
-  needs_update: "NEEDS UPDATE",
-  error: "ERROR",
-};
-
-const VIEW_APPLICATION_STATUSES = new Set<VerificationStatus>([
-  "submitted",
-  "under_review",
-  "needs_more_info",
-  "rejected",
-]);
-
-function verificationStatusPill(
-  creator: Creator | null,
-  application: VerificationApplication | null,
-): { label: string; status: VerificationStatus | "not_applied" | "verified" } {
-  if (creator?.verified) return { label: "VERIFIED", status: "verified" };
-  if (application?.status) {
-    return {
-      label: VERIFICATION_PILL_LABELS[application.status],
-      status: application.status,
-    };
-  }
-  return { label: "NOT APPLIED", status: "not_applied" };
-}
-
-function statusPillClass(status: VerificationStatus | "not_applied" | "verified"): string {
-  if (status === "verified") return "status-pill status-pill--approved";
-  if (status === "not_applied") return "status-pill status-pill--draft";
-  return `status-pill status-pill--${status}`;
-}
-
-type ConnectState = {
-  configured: boolean;
-  accountId: string | null;
-  chargesEnabled: boolean;
-  detailsSubmitted: boolean;
-  onboardingComplete: boolean;
-  requirementsPastDue: boolean;
-};
-
-function payoutStatusFromConnect(connect: ConnectState): PayoutStatus {
-  if (!connect.configured) return "unavailable";
-  if (!connect.accountId) return "not_started";
-  // Past-due requirements beat "active" — creator must fix Stripe details.
-  if (connect.requirementsPastDue) return "needs_update";
-  if (connect.onboardingComplete) return "active";
-  // Details in, transfers not live yet — Stripe still reviewing.
-  if (connect.detailsSubmitted && !connect.chargesEnabled) return "pending";
-  // Account exists, onboarding unfinished / currently due.
-  return "incomplete";
-}
-
-function payoutStatusPill(
-  connect: ConnectState | null,
-  connectFailed: boolean,
-): {
-  label: string;
-  status: PayoutStatus | "loading";
-  helper: string | null;
-} {
-  if (connectFailed && !connect) {
-    return {
-      label: PAYOUT_PILL_LABELS.error,
-      status: "error",
-      helper: "Couldn't load payout status. Try again.",
-    };
-  }
-  if (!connect) return { label: "…", status: "loading", helper: null };
-  const status = payoutStatusFromConnect(connect);
-  const helpers: Record<PayoutStatus, string> = {
-    unavailable: "Payouts aren't available right now.",
-    not_started: "Finish setup to receive payouts.",
-    incomplete: "Finish setup to receive payouts.",
-    pending: "Stripe is reviewing your payout details.",
-    active: "You can receive sales.",
-    needs_update: "Update your payout details to keep receiving sales.",
-    error: "Couldn't load payout status. Try again.",
+function mapPurchasedRow(row: EntitlementRow & { datacuts?: unknown }): PurchasedCut | null {
+  const entitlement = mapEntitlement(row);
+  if (entitlement.status !== "active") return null;
+  const rel = row.datacuts as
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        storage_path?: string | null;
+        file_name?: string | null;
+      }
+    | {
+        id: number;
+        slug: string;
+        title: string;
+        storage_path?: string | null;
+        file_name?: string | null;
+      }[]
+    | null
+    | undefined;
+  const cut = Array.isArray(rel) ? rel[0] : rel;
+  if (!cut) return null;
+  const storagePath = typeof cut.storage_path === "string" ? cut.storage_path.trim() : "";
+  return {
+    entitlementId: entitlement.id,
+    datacutId: cut.id,
+    slug: cut.slug,
+    title: cut.title,
+    license: entitlement.license,
+    hasFile: !!storagePath,
   };
-  return { label: PAYOUT_PILL_LABELS[status], status, helper: helpers[status] };
-}
-
-function payoutStatusPillClass(status: PayoutStatus | "loading"): string {
-  if (status === "loading") return "status-pill status-pill--draft";
-  if (status === "unavailable" || status === "error") {
-    return "status-pill status-pill--rejected";
-  }
-  if (status === "not_started") return "status-pill status-pill--draft";
-  if (status === "incomplete") return "status-pill status-pill--submitted";
-  if (status === "pending") return "status-pill status-pill--under_review";
-  if (status === "active") return "status-pill status-pill--approved";
-  return "status-pill status-pill--needs_more_info";
 }
 
 export default function DashboardPage() {
   const { user, profile, loading, configured } = useAuth();
+  const [tab, setTab] = useState<DashboardTab>("listings");
   const [creator, setCreator] = useState<Creator | null>(null);
   const [listings, setListings] = useState<Datacut[]>([]);
-  const [verification, setVerification] = useState<VerificationApplication | null>(null);
+  const [purchased, setPurchased] = useState<PurchasedCut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [connectBusy, setConnectBusy] = useState(false);
-  const [connectMsg, setConnectMsg] = useState<string | null>(null);
-  const [connect, setConnect] = useState<ConnectState | null>(null);
-  const [connectFailed, setConnectFailed] = useState(false);
-
-  async function refreshConnectStatus(sync = false) {
-    try {
-      const res = await fetch("/api/stripe/connect/status", {
-        method: sync ? "POST" : "GET",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to load payout status");
-      setConnectFailed(false);
-      setConnect({
-        configured: !!data.configured,
-        accountId: data.accountId ?? null,
-        chargesEnabled: !!data.chargesEnabled,
-        detailsSubmitted: !!data.detailsSubmitted,
-        onboardingComplete: !!data.onboardingComplete,
-        requirementsPastDue: !!data.requirementsPastDue,
-      });
-    } catch (err) {
-      setConnectFailed(true);
-      setConnectMsg("Couldn't load payout status. Try again.");
-      console.error("[dashboard payouts]", formatClientError(err, "Could not load payout status"));
-    }
-  }
-
-  async function startConnectOnboarding() {
-    setConnectBusy(true);
-    setConnectMsg(null);
-    try {
-      const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
-      let data: { url?: string; error?: string; code?: string } = {};
-      try {
-        data = (await res.json()) as typeof data;
-      } catch {
-        setConnectBusy(false);
-        setConnectMsg("Couldn't open payout setup. Please try again.");
-        return;
-      }
-      if (!res.ok || !data.url) {
-        setConnectBusy(false);
-        if (res.status === 401) {
-          setConnectMsg("Sign in to set up payouts.");
-        } else if (res.status === 503 || data.code === "stripe_not_configured") {
-          setConnectMsg("Payouts aren't available right now. Please try again later.");
-        } else {
-          setConnectMsg("Couldn't open payout setup. Please try again.");
-        }
-        return;
-      }
-      // Keep spinner + message until the browser navigates away.
-      window.location.href = data.url;
-    } catch {
-      setConnectBusy(false);
-      setConnectMsg("Couldn't open payout setup. Check your connection and try again.");
-    }
-  }
+  const [downloadId, setDownloadId] = useState<number | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   async function handleDeleteListing(cut: Datacut) {
     if (!window.confirm(`Delete “${cut.title}”? This cannot be undone.`)) return;
@@ -241,6 +105,37 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleDownload(cut: PurchasedCut) {
+    setDownloadError(null);
+    setDownloadId(cut.datacutId);
+    try {
+      const res = await fetch(`/api/entitlements/access?datacutId=${cut.datacutId}`);
+      const data = (await res.json()) as {
+        error?: string;
+        delivery?: { mode?: string; url?: string; fileName?: string; note?: string };
+      };
+      if (!res.ok) {
+        setDownloadError(data.error ?? "Download denied");
+        return;
+      }
+      if (data.delivery?.mode === "signed_url" && data.delivery.url) {
+        const anchor = document.createElement("a");
+        anchor.href = data.delivery.url;
+        anchor.rel = "noopener";
+        anchor.download = data.delivery.fileName || "download";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } else {
+        setDownloadError(data.delivery?.note ?? data.error ?? "No downloadable file yet");
+      }
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadId(null);
+    }
+  }
+
   useEffect(() => {
     if (loading) return;
     if (!configured || !user) return;
@@ -254,43 +149,39 @@ export default function DashboardPage() {
         const ensured = await ensureCreatorForUser(supabase, user!, profile?.displayName);
         if (cancelled) return;
         setCreator(ensured);
-        const [{ data, error: listError }, { data: verificationData }] = await Promise.all([
-          supabase
-            .from("datacuts")
-            .select(
-              "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, storage_path, file_name, creators(name, verified), categories(name)",
-            )
-            .eq("creator_id", ensured.id)
-            .order("updated_at", { ascending: false }),
-          supabase
-            .from("verification_applications")
-            .select("*")
-            .eq("creator_id", ensured.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ]);
+        const [{ data, error: listError }, { data: entitlementData, error: entitlementError }] =
+          await Promise.all([
+            supabase
+              .from("datacuts")
+              .select(
+                "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, storage_path, file_name, creators(name, verified), categories(name)",
+              )
+              .eq("creator_id", ensured.id)
+              .order("updated_at", { ascending: false }),
+            supabase
+              .from("entitlements")
+              .select(
+                "id, user_id, datacut_id, license, license_version, amount_cents, currency, platform_fee_cents, stripe_checkout_session_id, stripe_payment_intent_id, stripe_account_id, status, downloaded_at, created_at, updated_at, datacuts(id, slug, title, storage_path, file_name)",
+              )
+              .eq("user_id", user!.id)
+              .eq("status", "active")
+              .order("created_at", { ascending: false }),
+          ]);
         if (listError) throw listError;
+        if (entitlementError) throw entitlementError;
         if (!cancelled) {
           setListings(((data ?? []) as DatacutRow[]).map(mapDatacut));
-          setVerification(
-            verificationData ? mapVerification(verificationData as VerificationRow) : null,
+          setPurchased(
+            ((entitlementData ?? []) as (EntitlementRow & { datacuts?: unknown })[])
+              .map(mapPurchasedRow)
+              .filter((row): row is PurchasedCut => row !== null),
           );
-        }
-        const params = new URLSearchParams(window.location.search);
-        const connectParam = params.get("connect");
-        // Always sync from Stripe so past-due → NEEDS UPDATE is accurate.
-        await refreshConnectStatus(true);
-        if (!cancelled && connectParam === "return") {
-          setConnectMsg("Payout settings updated.");
-        } else if (!cancelled && connectParam === "refresh") {
-          setConnectMsg("Your payout link expired. Try setting up again.");
         }
       } catch (err) {
         if (!cancelled) {
           setCreator(null);
           setListings([]);
-          setVerification(null);
+          setPurchased([]);
           setError(formatClientError(err, "Failed to load dashboard"));
         }
       } finally {
@@ -368,21 +259,6 @@ export default function DashboardPage() {
     );
   }
 
-  const verificationPill = verificationStatusPill(creator, verification);
-  const payoutPill = payoutStatusPill(connect, connectFailed);
-  const hideVerificationButton =
-    !!creator?.verified || verification?.status === "approved";
-  const verificationButtonLabel =
-    verification && VIEW_APPLICATION_STATUSES.has(verification.status)
-      ? "View application"
-      : "Apply for Verified";
-  const payoutActionBlocked =
-    connectFailed ||
-    !connect ||
-    !connect.configured ||
-    payoutPill.status === "unavailable" ||
-    payoutPill.status === "error";
-
   return (
     <section className="page-view dashboard-view">
       <div className="page-intro">
@@ -396,135 +272,133 @@ export default function DashboardPage() {
             View storefront
           </Link>
         ) : null}
-        <p>
-          {creator?.verified
-            ? "Draft and publish datacuts, and manage your storefront."
-            : "Draft and publish datacuts, apply for verification, and manage your storefront. Unverified creators can still list and sell."}
-        </p>
+        <p>Draft and publish datacuts, open purchases you own, and manage your storefront.</p>
       </div>
 
       {error ? <p className="form-error dashboard-inline-error">{error}</p> : null}
 
-      <div className="results-header dashboard-section-toolbar">
-        <div>
-          <h2>Your listings</h2>
-          <span>{listings.length}</span>
-        </div>
-        <div className="dashboard-section-actions">
-          <Link className="primary-button small" href="/dashboard/listings/new">
-            New listing
-          </Link>
-        </div>
+      <div className="filter-row dashboard-tabs" role="tablist" aria-label="Dashboard sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "listings"}
+          className={tab === "listings" ? "active" : undefined}
+          onClick={() => setTab("listings")}
+        >
+          Listings
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "purchased"}
+          className={tab === "purchased" ? "active" : undefined}
+          onClick={() => setTab("purchased")}
+        >
+          Purchased datacuts
+        </button>
       </div>
 
-      <div className="listing-table">
-        {error ? (
-          <p className="empty-hint">Listings unavailable until the error above is fixed.</p>
-        ) : listings.length === 0 ? (
-          <p className="empty-hint">No listings yet. Create a draft to get started.</p>
-        ) : (
-          listings.map((cut) => {
-            const listingPill = listingStatusPill(cut.status);
-            return (
-              <article key={cut.id} className="listing-row">
-                <div>
-                  <b>{cut.title}</b>
-                  <span className="listing-row-meta">
-                    <span className={listingStatusPillClass(listingPill.status)}>
-                      {listingPill.label}
-                    </span>
-                    <span className="listing-row-meta-detail">
-                      {`${
-                        cut.license === "commercial"
-                          ? "Commercial License"
-                          : "Personal License"
-                      } · $${cut.price}`}
-                    </span>
-
-                  </span>
-                </div>
-                <div className="listing-row-actions">
-                  <ListingRowMenu
-                    editHref={`/dashboard/listings/${cut.id}`}
-                    listingTitle={cut.title}
-                    deleting={deletingId === cut.id}
-                    onDelete={() => void handleDeleteListing(cut)}
-                  />
-                </div>
-              </article>
-            );
-          })
-        )}
-      </div>
-
-      <section className="dashboard-verification-card" aria-labelledby="dashboard-verification-heading">
-        <div className="results-header dashboard-section-toolbar">
-          <div>
-            <h2 id="dashboard-verification-heading">Verification</h2>
-          </div>
-          {!hideVerificationButton ? (
+      {tab === "listings" ? (
+        <>
+          <div className="results-header dashboard-section-toolbar">
+            <div>
+              <h2>Your listings</h2>
+              <span>{listings.length}</span>
+            </div>
             <div className="dashboard-section-actions">
-              <Link className="primary-button small" href="/dashboard/verification">
-                {verificationButtonLabel}
+              <Link className="primary-button small" href="/dashboard/listings/new">
+                New listing
               </Link>
             </div>
-          ) : null}
-        </div>
-        <p className="dashboard-verification-status">
-          <b>Status:</b>
-          <span className={statusPillClass(verificationPill.status)}>{verificationPill.label}</span>
-        </p>
-      </section>
-
-      <section className="dashboard-verification-card" aria-labelledby="dashboard-payouts-heading">
-        <div className="results-header dashboard-section-toolbar">
-          <div>
-            <h2 id="dashboard-payouts-heading">Payouts</h2>
           </div>
-          <div className="dashboard-section-actions">
-            {connectBusy ? (
-              <p className="dashboard-payouts-redirect" role="status" aria-live="polite">
-                <span className="dashboard-payouts-spinner" aria-hidden="true" />
-                Redirecting to Stripe — don&apos;t close this tab.
-              </p>
-            ) : connectFailed ? (
-              <button
-                type="button"
-                className="primary-button small"
-                onClick={() => {
-                  setConnectMsg(null);
-                  void refreshConnectStatus(true);
-                }}
-              >
-                Retry
-              </button>
-            ) : payoutActionBlocked ? null : (
-              <button
-                type="button"
-                className="primary-button small"
-                onClick={() => void startConnectOnboarding()}
-              >
-                {connect?.onboardingComplete ? "Update payout settings" : "Set up payouts"}
-              </button>
+
+          <div className="listing-table">
+            {error ? (
+              <p className="empty-hint">Listings unavailable until the error above is fixed.</p>
+            ) : listings.length === 0 ? (
+              <p className="empty-hint">No listings yet. Create a draft to get started.</p>
+            ) : (
+              listings.map((cut) => {
+                const listingPill = listingStatusPill(cut.status);
+                return (
+                  <article key={cut.id} className="listing-row">
+                    <div>
+                      <b>{cut.title}</b>
+                      <span className="listing-row-meta">
+                        <span className={listingStatusPillClass(listingPill.status)}>
+                          {listingPill.label}
+                        </span>
+                        <span className="listing-row-meta-detail">
+                          {`${
+                            cut.license === "commercial"
+                              ? "Commercial License"
+                              : "Personal License"
+                          } · $${cut.price}`}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="listing-row-actions">
+                      <ListingRowMenu
+                        editHref={`/dashboard/listings/${cut.id}`}
+                        listingTitle={cut.title}
+                        deleting={deletingId === cut.id}
+                        onDelete={() => void handleDeleteListing(cut)}
+                      />
+                    </div>
+                  </article>
+                );
+              })
             )}
           </div>
-        </div>
-        <p className="dashboard-verification-status">
-          <b>Status:</b>
-          <span className={payoutStatusPillClass(payoutPill.status)}>{payoutPill.label}</span>
-        </p>
-        {payoutPill.helper ? <p className="empty-hint">{payoutPill.helper}</p> : null}
-        {connectMsg && connectMsg !== payoutPill.helper ? (
-          <p className={connectFailed ? "form-error" : "empty-hint"}>{connectMsg}</p>
-        ) : null}
-        {!connectFailed ? (
-          <p className="empty-hint">
-            {payoutPill.status === "not_started" || payoutPill.status === "incomplete"
-              ? "No payout account yet. Set up payouts so buyers can purchase your listings."
-              : "Buyers can purchase once payouts are set up. DataOnly takes a 10% platform fee."}
-          </p>
-        ) : null}
-      </section>
+        </>
+      ) : (
+        <>
+          <div className="results-header dashboard-section-toolbar">
+            <div>
+              <h2>Purchased datacuts</h2>
+              <span>{purchased.length}</span>
+            </div>
+          </div>
+
+          {downloadError ? <p className="form-error dashboard-inline-error">{downloadError}</p> : null}
+
+          <div className="listing-table">
+            {error ? (
+              <p className="empty-hint">Purchases unavailable until the error above is fixed.</p>
+            ) : purchased.length === 0 ? (
+              <p className="empty-hint">No purchases yet. Entitled datacuts will show up here.</p>
+            ) : (
+              purchased.map((cut) => (
+                <article key={cut.entitlementId} className="listing-row">
+                  <div>
+                    <b>{cut.title}</b>
+                    <span className="listing-row-meta">
+                      <span className="status-pill status-pill--approved">OWNED</span>
+                      <span className="listing-row-meta-detail">
+                        {cut.license === "commercial" ? "Commercial License" : "Personal License"}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="listing-row-actions">
+                    <Link className="text-button" href={`/datacuts/${cut.slug}`}>
+                      Open
+                    </Link>
+                    <button
+                      type="button"
+                      className="primary-button small"
+                      disabled={downloadId === cut.datacutId || !cut.hasFile}
+                      title={cut.hasFile ? undefined : "No file uploaded yet"}
+                      onClick={() => void handleDownload(cut)}
+                    >
+                      {downloadId === cut.datacutId ? "Preparing…" : "Download"}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 }

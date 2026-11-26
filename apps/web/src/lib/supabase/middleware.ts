@@ -33,7 +33,9 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const protectedPrefix =
-    path.startsWith("/dashboard") || path.startsWith("/admin");
+    path.startsWith("/dashboard") ||
+    path.startsWith("/admin") ||
+    path.startsWith("/account");
 
   if (protectedPrefix && !user) {
     const redirectUrl = request.nextUrl.clone();

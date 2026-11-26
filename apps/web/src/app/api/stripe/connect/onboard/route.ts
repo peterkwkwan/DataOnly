@@ -91,8 +91,8 @@ export async function POST() {
   try {
     const link = await createConnectOnboardingLinkV2({
       accountId,
-      refreshUrl: `${origin}/dashboard?connect=refresh`,
-      returnUrl: `${origin}/dashboard?connect=return`,
+      refreshUrl: `${origin}/account?connect=refresh`,
+      returnUrl: `${origin}/account?connect=return`,
     });
 
     return NextResponse.json({

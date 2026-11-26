@@ -101,6 +101,9 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                     {accountEmail ? <span>{accountEmail}</span> : null}
                   </div>
                 </div>
+                <Link href="/account" onClick={() => setMobileMenu(false)}>
+                  Account
+                </Link>
                 {isAdmin ? (
                   <>
                     <Link href="/admin/verification" onClick={() => setMobileMenu(false)}>

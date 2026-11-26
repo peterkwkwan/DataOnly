@@ -91,49 +91,62 @@ export function AccountMenu() {
             </span>
           </div>
 
-          {isAdmin ? (
-            <div className="account-menu-items">
-              <Link
-                role="menuitem"
-                className={
-                  pathname.startsWith("/admin/verification")
-                    ? "account-menu-item active"
-                    : "account-menu-item"
-                }
-                href="/admin/verification"
-                onClick={() => setOpen(false)}
-              >
-                <Icon name="shield" size={16} />
-                Verification
-              </Link>
-              <Link
-                role="menuitem"
-                className={
-                  pathname.startsWith("/admin/refunds")
-                    ? "account-menu-item active"
-                    : "account-menu-item"
-                }
-                href="/admin/refunds"
-                onClick={() => setOpen(false)}
-              >
-                <Icon name="arrow" size={16} />
-                Refunds
-              </Link>
-              <Link
-                role="menuitem"
-                className={
-                  pathname.startsWith("/admin/reports")
-                    ? "account-menu-item active"
-                    : "account-menu-item"
-                }
-                href="/admin/reports"
-                onClick={() => setOpen(false)}
-              >
-                <Icon name="shield" size={16} />
-                Reports
-              </Link>
-            </div>
-          ) : null}
+          <div className="account-menu-items">
+            <Link
+              role="menuitem"
+              className={
+                pathname.startsWith("/account") ? "account-menu-item active" : "account-menu-item"
+              }
+              href="/account"
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="users" size={16} />
+              Account
+            </Link>
+            {isAdmin ? (
+              <>
+                <Link
+                  role="menuitem"
+                  className={
+                    pathname.startsWith("/admin/verification")
+                      ? "account-menu-item active"
+                      : "account-menu-item"
+                  }
+                  href="/admin/verification"
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon name="shield" size={16} />
+                  Verification
+                </Link>
+                <Link
+                  role="menuitem"
+                  className={
+                    pathname.startsWith("/admin/refunds")
+                      ? "account-menu-item active"
+                      : "account-menu-item"
+                  }
+                  href="/admin/refunds"
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon name="arrow" size={16} />
+                  Refunds
+                </Link>
+                <Link
+                  role="menuitem"
+                  className={
+                    pathname.startsWith("/admin/reports")
+                      ? "account-menu-item active"
+                      : "account-menu-item"
+                  }
+                  href="/admin/reports"
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon name="shield" size={16} />
+                  Reports
+                </Link>
+              </>
+            ) : null}
+          </div>
 
           <div className="account-menu-divider" role="separator" />
 
