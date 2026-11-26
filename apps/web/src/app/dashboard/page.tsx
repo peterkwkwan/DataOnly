@@ -390,23 +390,25 @@ function DashboardPageContent() {
             ) : null}
           </div>
 
-          <div className="listing-table">
-            {error ? (
+          {error ? (
+            <div className="listing-table">
               <p className="empty-hint">Listings unavailable until the error above is fixed.</p>
-            ) : listings.length === 0 ? (
-              <div className="m-empty-state" style={{ marginTop: 40 }}>
-                <h3>No listings yet</h3>
-                <p>Create a draft to get started.</p>
-                <Link
-                  href="/dashboard/listings/new"
-                  className="primary-button"
-                  style={{ display: "inline-flex" }}
-                >
-                  New listing
-                </Link>
-              </div>
-            ) : (
-              listings.map((cut) => {
+            </div>
+          ) : listings.length === 0 ? (
+            <div className="m-empty-state">
+              <h3>No listings yet</h3>
+              <p>Create a draft to get started.</p>
+              <Link
+                href="/dashboard/listings/new"
+                className="primary-button"
+                style={{ display: "inline-flex" }}
+              >
+                New listing
+              </Link>
+            </div>
+          ) : (
+            <div className="listing-table">
+              {listings.map((cut) => {
                 const listingPill = listingStatusPill(cut.status);
                 return (
                   <article key={cut.id} className="listing-row">
@@ -435,9 +437,9 @@ function DashboardPageContent() {
                     </div>
                   </article>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </>
       ) : null}
 
@@ -509,7 +511,7 @@ function DashboardPageContent() {
               ))}
             </div>
           ) : (
-            <div className="m-empty-state" style={{ marginTop: 40 }}>
+            <div className="m-empty-state">
               <h3>Your library is empty</h3>
               <p>Save datacuts to compare or purchase later.</p>
               <Link href="/explore" className="primary-button" style={{ display: "inline-flex" }}>
