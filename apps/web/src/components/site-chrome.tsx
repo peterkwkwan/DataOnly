@@ -6,8 +6,8 @@ import { Suspense, useEffect, useState } from "react";
 import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/brand";
 import { Icon } from "@/components/icons";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { useAuth } from "@/context/auth-context";
-import { useSaved } from "@/context/saved-context";
 import { MobileShell } from "@/components/mobile-shell";
 
 function SavedNavActive({ onActive }: { onActive: (active: boolean) => void }) {
@@ -27,7 +27,6 @@ const NAV = [
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { savedIds, hydrated } = useSaved();
   const { user, profile, signOut, isAdmin, configured } = useAuth();
   const [mobileMenu, setMobileMenu] = useState(false);
   const [savedNavActive, setSavedNavActive] = useState(false);
@@ -57,10 +56,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             <Link className="primary-button small" href={configured ? "/dashboard" : "/auth/sign-in"}>
               Start selling <Icon name="arrow" size={16} />
             </Link>
-            <Link className="icon-button" href="/dashboard?tab=saved" aria-label="Saved">
-              <Icon name="bookmark" size={19} />
-              <span className="save-count">{hydrated ? savedIds.length : 0}</span>
-            </Link>
+            {user ? <NotificationsBell /> : null}
             {user ? (
               <Link
                 className={

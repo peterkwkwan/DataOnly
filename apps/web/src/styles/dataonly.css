@@ -284,6 +284,75 @@
   border: 1px solid rgba(217, 221, 213, 0.7);
   z-index: 60;
 }
+.notifications-bell {
+  position: relative;
+}
+.notifications-bell-icon {
+  display: grid;
+  transform-origin: 50% 15%;
+}
+.notifications-bell .icon-button:hover .notifications-bell-icon,
+.notifications-bell .icon-button:focus-visible .notifications-bell-icon {
+  animation: notifications-bell-ring 0.7s ease 1;
+}
+@keyframes notifications-bell-ring {
+  0% { transform: rotate(0deg); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(2deg); }
+  100% { transform: rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notifications-bell .icon-button:hover .notifications-bell-icon,
+  .notifications-bell .icon-button:focus-visible .notifications-bell-icon {
+    animation: none;
+  }
+}
+.account-menu-panel.notifications-panel {
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+}
+.notifications-panel-title {
+  margin: 0;
+  padding: 8px 12px 6px;
+  font: 700 14px "DM Sans", sans-serif;
+  color: var(--ink);
+}
+.notifications-empty,
+.notifications-panel .form-error {
+  margin: 4px 12px 10px;
+}
+.notifications-empty {
+  color: #7a8680;
+  font-size: 14px;
+}
+.notification-row {
+  align-items: flex-start;
+}
+.notification-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.notification-meta {
+  color: #7a8680;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.notification-dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  flex-shrink: 0;
+}
 .account-menu-header {
   display: flex;
   align-items: center;
@@ -2039,6 +2108,16 @@ footer button {
   .header-actions > .icon-button,
   .header-actions > .account-menu {
     display: none;
+  }
+  .header-actions > .notifications-bell {
+    display: grid;
+  }
+  .notifications-bell .notifications-panel {
+    position: fixed;
+    top: 76px;
+    right: 12px;
+    left: auto;
+    width: min(320px, calc(100vw - 24px));
   }
   .account-menu-label {
     display: none;

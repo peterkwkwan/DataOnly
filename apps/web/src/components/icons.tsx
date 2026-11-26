@@ -4,6 +4,7 @@ import type { IndustryIconName } from "@dataonly/core";
 
 export type IconName =
   | "arrow"
+  | "bell"
   | "bookmark"
   | "chart"
   | "chevron"
@@ -36,6 +37,13 @@ export function Icon({
     arrow: (
       <>
         <path d="M5 12h14M14 7l5 5-5 5" />
+      </>
+    ),
+    bell: (
+      <>
+        <path d="M12 3.2v1.8" />
+        <path d="M6 10a6 6 0 0 1 12 0c0 4.4 2 6 2 6H4s2-1.6 2-6Z" />
+        <path d="M10 18.5a2 2 0 0 0 4 0" />
       </>
     ),
     bookmark: <path d="M6 4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V21l-6-3.8L6 21V4.8Z" />,
