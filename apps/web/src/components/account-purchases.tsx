@@ -462,7 +462,7 @@ function PaymentMethod({ userId }: { userId: string }) {
   );
 }
 
-function PurchaseHistory({ userId }: { userId: string }) {
+export function PurchaseHistory({ userId }: { userId: string }) {
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -793,7 +793,6 @@ export function AccountPurchases({
         </section>
       )}
       <PaymentMethod userId={userId} />
-      <PurchaseHistory userId={userId} />
     </>
   );
 }

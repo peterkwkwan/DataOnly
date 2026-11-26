@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { AccountPurchases } from "@/components/account-purchases";
+import { AccountPurchases, PurchaseHistory } from "@/components/account-purchases";
 import { Verified } from "@/components/brand";
 import { useAuth } from "@/context/auth-context";
 import { ensureCreatorForUser } from "@/lib/creator";
@@ -29,7 +29,7 @@ const VIEW_APPLICATION_STATUSES = new Set<VerificationStatus>([
   "rejected",
 ]);
 
-type AccountTab = "account" | "purchases";
+type AccountTab = "account" | "purchases" | "payment";
 
 function verificationStatusPill(
   creator: Creator | null,
@@ -53,10 +53,25 @@ function statusPillClass(status: VerificationStatus | "not_applied" | "verified"
 
 function tabFromSearch(params: { get(name: string): string | null }): AccountTab {
   const connect = params.get("connect");
-  if (connect === "return" || connect === "refresh" || params.get("tab") === "purchases") {
-    return "purchases";
+  if (connect === "return" || connect === "refresh" || params.get("tab") === "payment") {
+    return "payment";
   }
+  if (params.get("tab") === "purchases") return "purchases";
   return "account";
+}
+
+function accountPath(params: { get(name: string): string | null }): string {
+  const connect = params.get("connect");
+  if (connect === "return" || connect === "refresh") return `/account?connect=${connect}`;
+  const tab = tabFromSearch(params);
+  if (tab === "account") return "/account";
+  return `/account?tab=${tab}`;
+}
+
+function introFor(tab: AccountTab): string {
+  if (tab === "payment") return "Payouts and a payment method.";
+  if (tab === "purchases") return "Your purchase history.";
+  return "Verification for your seller account.";
 }
 
 function AccountPageContent() {
@@ -68,10 +83,7 @@ function AccountPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [accountBusy, setAccountBusy] = useState(true);
 
-  const purchasesDeepLink = tabFromSearch(searchParams);
-  const signInHref = `/auth/sign-in?next=${encodeURIComponent(
-    purchasesDeepLink === "purchases" ? "/account?tab=purchases" : "/account",
-  )}`;
+  const signInHref = `/auth/sign-in?next=${encodeURIComponent(accountPath(searchParams))}`;
 
   useEffect(() => {
     if (loading) return;
@@ -160,7 +172,7 @@ function AccountPageContent() {
 
   function selectTab(next: AccountTab) {
     setTab(next);
-    const path = next === "purchases" ? "/account?tab=purchases" : "/account";
+    const path = next === "account" ? "/account" : `/account?tab=${next}`;
     window.history.replaceState(null, "", path);
   }
 
@@ -179,11 +191,7 @@ function AccountPageContent() {
           {creator?.name ?? profile?.displayName ?? "Your account"}
           {creator?.verified ? <Verified /> : null}
         </h1>
-        <p>
-          {tab === "purchases"
-            ? "Payouts, a payment method, and your purchase history."
-            : "Verification for your seller account."}
-        </p>
+        <p>{introFor(tab)}</p>
       </div>
 
       <div className="filter-row dashboard-tabs" role="tablist" aria-label="Account sections">
@@ -204,6 +212,15 @@ function AccountPageContent() {
           onClick={() => selectTab("purchases")}
         >
           Purchases
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "payment"}
+          className={tab === "payment" ? "active" : undefined}
+          onClick={() => selectTab("payment")}
+        >
+          Payment
         </button>
       </div>
 
@@ -245,6 +262,9 @@ function AccountPageContent() {
       ) : null}
 
       <div hidden={tab !== "purchases"}>
+        <PurchaseHistory userId={user.id} />
+      </div>
+      <div hidden={tab !== "payment"}>
         <AccountPurchases
           userId={user.id}
           connectQuery={searchParams.get("connect")}
