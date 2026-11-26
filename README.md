@@ -299,7 +299,7 @@ grant select, insert, update, delete on public.entitlements to service_role;
 5. Webhook `checkout.session.completed` (service_role) upserts `entitlements`. Success URL also calls `POST /api/stripe/confirm` with `session_id` so a missed webhook still grants access.
 6. Buyer sees **Download** when entitled. `/api/entitlements/access` checks an active entitlement, then mints a short-lived signed URL from the private `datacuts` Storage bucket. Access is refused without an active entitlement. First successful mint stamps `entitlements.downloaded_at`.
 7. Creators attach files on the listing form (or upload via Dashboard + set `storage_path`). Bucket / policy setup notes live with the project docs (`entitled-downloads`).
-8. Admin refunds at `/admin/refunds` (refunds the Checkout payment + marks entitlement `refunded`) **only if** `downloaded_at` is null. Webhook `charge.refunded` / `payment_intent.refunded` also syncs status. Buyer sees **Access revoked** (no Download).
+8. Admin refunds at `/admin/refunds` (refunds the Checkout payment + marks entitlement `refunded`) **only if** `downloaded_at` is null. Webhook `charge.refunded` / `payment_intent.refunded` also syncs status. Buyer sees the default **Buy datacut** CTA (no Download).
 
 ### SQL for Storage delivery
 

@@ -49,7 +49,7 @@ export default function DatacutDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [entitled, setEntitled] = useState(false);
-  const [accessRevoked, setAccessRevoked] = useState<"refunded" | "revoked" | null>(null);
+  const [accessRevoked, setAccessRevoked] = useState(false);
   const [entitlementLoading, setEntitlementLoading] = useState(false);
   const [accessBusy, setAccessBusy] = useState(false);
   const [access, setAccess] = useState<AccessPayload | null>(null);
@@ -58,25 +58,20 @@ export default function DatacutDetailScreen() {
   const refreshEntitlement = useCallback(async () => {
     if (!cut || !authConfigured || !user || !isApiConfigured()) {
       setEntitled(false);
-      setAccessRevoked(null);
+      setAccessRevoked(false);
       return;
     }
     setEntitlementLoading(true);
     try {
       const data = await checkEntitlement(cut.id);
       setEntitled(!!data.entitled);
-      if (data.entitled) {
-        setAccessRevoked(null);
-      } else if (data.reason === "refunded" || data.status === "refunded") {
-        setAccessRevoked("refunded");
-      } else if (data.reason === "revoked" || data.status === "revoked") {
-        setAccessRevoked("revoked");
-      } else {
-        setAccessRevoked(null);
-      }
+      // Refunded → same as never bought (Buy). Only admin-revoked stays locked.
+      setAccessRevoked(
+        !data.entitled && (data.reason === "revoked" || data.status === "revoked"),
+      );
     } catch {
       setEntitled(false);
-      setAccessRevoked(null);
+      setAccessRevoked(false);
     } finally {
       setEntitlementLoading(false);
     }
@@ -345,9 +340,7 @@ export default function DatacutDetailScreen() {
           {banner ? <Text style={styles.banner}>{banner}</Text> : null}
           {accessRevoked && !entitled ? (
             <Text style={styles.banner}>
-              {accessRevoked === "refunded"
-                ? "This purchase was refunded. Download is no longer available."
-                : "Access to this datacut was revoked. Download is no longer available."}
+              Access to this datacut was revoked. Download is no longer available.
             </Text>
           ) : null}
           {accessError ? <Text style={styles.errorText}>{accessError}</Text> : null}
