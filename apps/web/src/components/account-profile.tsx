@@ -111,7 +111,12 @@ export function AccountProfile({
             }}
           />
         </label>
-        <p className="form-footnote">Shown on your public storefront.</p>
+        <div className="account-profile-storefront-hint">
+          <p className="form-footnote">Shown on your public storefront.</p>
+          <Link className="link-button" href={`/creators/${creator.slug}`}>
+            View storefront
+          </Link>
+        </div>
         {error ? <p className="form-error">{error}</p> : null}
         {message ? <p className="form-success">{message}</p> : null}
         <div className="dashboard-actions">
@@ -119,9 +124,6 @@ export function AccountProfile({
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
-        <Link className="link-button" href={`/creators/${creator.slug}`}>
-          View storefront
-        </Link>
       </form>
     </section>
   );

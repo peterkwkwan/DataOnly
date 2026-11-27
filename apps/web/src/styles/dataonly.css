@@ -3341,8 +3341,16 @@ footer button {
 .account-profile-form .large-avatar {
   position: static;
 }
-.account-profile-form .link-button {
-  justify-self: start;
+.account-profile-storefront-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.account-profile-storefront-hint .link-button {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .dashboard-actions {
   display: flex;
