@@ -1369,9 +1369,6 @@
   border-top: 1px solid #e3e6e1;
   border-bottom: 1px solid #e3e6e1;
 }
-.listing-stats span {
-  min-width: 72px;
-}
 .store-stats span {
   color: #8b9490;
   font-size: 9px;
@@ -1382,6 +1379,14 @@
   color: var(--ink);
   font: 700 14px "Manrope";
   margin-bottom: 2px;
+}
+/* Match empty-hint body size on listing stats only (storefront keeps store-stats). */
+.listing-stats span {
+  min-width: 72px;
+  font-size: 1rem;
+}
+.listing-stats b {
+  font-size: 1rem;
 }
 .store-tags {
   display: flex;
