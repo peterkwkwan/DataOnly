@@ -430,6 +430,7 @@ function DashboardPageContent() {
                     <div className="listing-row-actions">
                       <ListingRowMenu
                         editHref={`/dashboard/listings/${cut.id}`}
+                        statsHref={`/dashboard/listings/${cut.id}/stats`}
                         listingTitle={cut.title}
                         deleting={deletingId === cut.id}
                         onDelete={() => void handleDeleteListing(cut)}

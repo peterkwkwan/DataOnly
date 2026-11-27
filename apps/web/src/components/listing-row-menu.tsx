@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 
 type ListingRowMenuProps = {
   editHref: string;
+  statsHref: string;
   listingTitle: string;
   deleting?: boolean;
   onDelete: () => void;
@@ -13,6 +14,7 @@ type ListingRowMenuProps = {
 
 export function ListingRowMenu({
   editHref,
+  statsHref,
   listingTitle,
   deleting = false,
   onDelete,
@@ -90,19 +92,15 @@ export function ListingRowMenu({
               <Icon name="trash" size={16} />
               {deleting ? "Deleting…" : "Delete"}
             </button>
-            <button
-              type="button"
+            <Link
               role="menuitem"
               className="listing-row-menu-item"
-              title="Listing stats coming soon"
-              onClick={() => {
-                setOpen(false);
-                window.alert("View stats is coming soon.");
-              }}
+              href={statsHref}
+              onClick={() => setOpen(false)}
             >
               <Icon name="chart" size={16} />
               View stats
-            </button>
+            </Link>
           </div>
         </div>
       ) : null}

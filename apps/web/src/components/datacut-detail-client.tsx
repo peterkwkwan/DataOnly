@@ -10,6 +10,7 @@ import { Icon } from "@/components/icons";
 import { ReportButton } from "@/components/report-button";
 import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
+import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 type AccessPayload = {
   access: string;
@@ -87,6 +88,39 @@ export function DatacutDetailClient({
     if (authLoading) return;
     void refreshEntitlement();
   }, [authLoading, refreshEntitlement]);
+
+  // One view per tab session; visitor_key is user id or anon uuid in localStorage.
+  useEffect(() => {
+    if (!configured || !isSupabaseConfigured()) return;
+    const sessionKey = `lpv:${cut.id}`;
+    try {
+      if (sessionStorage.getItem(sessionKey)) return;
+      sessionStorage.setItem(sessionKey, "1");
+    } catch {
+      /* private mode — still attempt insert once this mount */
+    }
+
+    let visitorKey: string | null = user?.id ?? null;
+    if (!visitorKey) {
+      try {
+        const storageKey = "dataonly_visitor_key";
+        let existing = localStorage.getItem(storageKey);
+        if (!existing) {
+          existing = crypto.randomUUID();
+          localStorage.setItem(storageKey, existing);
+        }
+        visitorKey = existing;
+      } catch {
+        visitorKey = null;
+      }
+    }
+
+    const supabase = createBrowserSupabaseClient();
+    void supabase.from("listing_page_views").insert({
+      datacut_id: cut.id,
+      visitor_key: visitorKey,
+    });
+  }, [configured, cut.id, user?.id]);
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
