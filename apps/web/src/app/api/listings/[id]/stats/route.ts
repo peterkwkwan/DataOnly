@@ -71,41 +71,48 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const admin = createServiceSupabaseClient();
-
-  const [
-    viewsRes,
-    purchasesRes,
-    downloadsRes,
-    savesRes,
-  ] = await Promise.all([
-    admin
-      .from("listing_page_views")
-      .select("*", { count: "exact", head: true })
-      .eq("datacut_id", datacutId),
-    admin
-      .from("purchases")
-      .select("status, amount_cents, currency")
-      .eq("datacut_id", datacutId)
-      .in("status", ["paid", "refunded"]),
-    admin
-      .from("entitlements")
-      .select("*", { count: "exact", head: true })
-      .eq("datacut_id", datacutId)
-      .not("downloaded_at", "is", null),
-    admin
-      .from("saved")
-      .select("*", { count: "exact", head: true })
-      .eq("datacut_id", datacutId),
-  ]);
-
-  for (const res of [viewsRes, purchasesRes, downloadsRes, savesRes]) {
-    if (res.error) {
-      return NextResponse.json({ error: res.error.message }, { status: 500 });
-    }
+  let viewsRes;
+  let purchasesRes;
+  let downloadsRes;
+  let savesRes;
+  try {
+    const admin = createServiceSupabaseClient();
+    [viewsRes, purchasesRes, downloadsRes, savesRes] = await Promise.all([
+      admin
+        .from("listing_page_views")
+        .select("*", { count: "exact", head: true })
+        .eq("datacut_id", datacutId),
+      admin
+        .from("purchases")
+        .select("status, amount_cents, currency")
+        .eq("datacut_id", datacutId)
+        .in("status", ["paid", "refunded"]),
+      admin
+        .from("entitlements")
+        .select("*", { count: "exact", head: true })
+        .eq("datacut_id", datacutId)
+        .not("downloaded_at", "is", null),
+      admin
+        .from("saved")
+        .select("*", { count: "exact", head: true })
+        .eq("datacut_id", datacutId),
+    ]);
+  } catch (err) {
+    console.error("[listing stats] service query failed", err);
+    return NextResponse.json({ error: "Stats unavailable" }, { status: 503 });
   }
 
-  const rows = purchasesRes.data ?? [];
+  // Missing tables / query failures → zeros (empty activity), not 500
+  for (const [label, res] of [
+    ["views", viewsRes],
+    ["purchases", purchasesRes],
+    ["downloads", downloadsRes],
+    ["saves", savesRes],
+  ] as const) {
+    if (res.error) console.warn(`[listing stats] ${label}:`, res.error.message);
+  }
+
+  const rows = purchasesRes.error ? [] : (purchasesRes.data ?? []);
   let paid = 0;
   let refunded = 0;
   let revenueCents = 0;
@@ -124,12 +131,12 @@ export async function GET(
   const refundRate = denom === 0 ? 0 : refunded / denom;
 
   return NextResponse.json({
-    views: viewsRes.count ?? 0,
+    views: viewsRes.error ? 0 : (viewsRes.count ?? 0),
     purchases: paid,
     revenueCents,
     currency,
     refundRate,
-    downloads: downloadsRes.count ?? 0,
-    saves: savesRes.count ?? 0,
+    downloads: downloadsRes.error ? 0 : (downloadsRes.count ?? 0),
+    saves: savesRes.error ? 0 : (savesRes.count ?? 0),
   });
 }
