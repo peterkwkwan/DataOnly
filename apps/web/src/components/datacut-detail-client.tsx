@@ -56,6 +56,7 @@ export function DatacutDetailClient({
   const [sampleBusy, setSampleBusy] = useState(false);
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [shareHint, setShareHint] = useState<string | null>(null);
   const [liveRating, setLiveRating] = useState(cut.rating);
   const [liveReviews, setLiveReviews] = useState(cut.reviews);
   const [tab, setTab] = useState<"overview" | "reviews">("overview");
@@ -240,6 +241,17 @@ export function DatacutDetailClient({
     }
   }
 
+  async function shareListing() {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareHint("Copied");
+    } catch {
+      setShareHint("Copy failed");
+    }
+    window.setTimeout(() => setShareHint(null), 1600);
+  }
+
   return (
     <div className="detail-layout">
       <div className="detail-art" style={{ background: cut.accent }}>
@@ -259,17 +271,31 @@ export function DatacutDetailClient({
           <span>
             <Icon name="star" size={14} filled /> {liveRating} ({liveReviews})
           </span>
-          <span className="detail-meta-updated">
-            {cut.updated}
-            {!isOwner ? (
-              <ReportButton
-                variant="overflow"
-                targetType="datacut"
-                datacutId={cut.id}
-                creatorId={cut.creatorId}
-              />
-            ) : null}
-          </span>
+          <span className="detail-meta-updated">{cut.updated}</span>
+        </div>
+        <div className="detail-actions">
+          <button type="button" className="detail-action" onClick={() => void shareListing()}>
+            <Icon name="share" size={18} />
+            <span>{shareHint ?? "Share"}</span>
+          </button>
+          <button
+            type="button"
+            className={`detail-action ${saved ? "saved" : ""}`}
+            onClick={() => toggleSaved(cut.id)}
+            aria-label={saved ? "Remove from saved" : "Save"}
+          >
+            <Icon name="bookmark" size={18} filled={saved} />
+            <span>{saved ? "Saved" : "Save"}</span>
+          </button>
+          {!isOwner ? (
+            <ReportButton
+              variant="overflow"
+              triggerLabel="Options"
+              targetType="datacut"
+              datacutId={cut.id}
+              creatorId={cut.creatorId}
+            />
+          ) : null}
         </div>
         <p>{cut.description}</p>
 
@@ -344,23 +370,6 @@ export function DatacutDetailClient({
                   {sampleBusy ? "Preparing…" : "Download sample"}
                 </button>
               ) : null}
-              <button
-                type="button"
-                className={`icon-button ${saved ? "saved" : ""}`}
-                onClick={() => toggleSaved(cut.id)}
-                aria-label="Save"
-                style={{
-                  border: "1px solid var(--line)",
-                  borderRadius: 8,
-                  width: "auto",
-                  padding: "0 14px",
-                  gap: 8,
-                  display: "inline-flex",
-                }}
-              >
-                <Icon name="bookmark" size={18} filled={saved} />
-                {saved ? "Saved" : "Save"}
-              </button>
             </div>
 
             {hasSample ? (

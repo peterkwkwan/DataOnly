@@ -19,6 +19,8 @@ type Props = {
   datacutId?: number | null;
   creatorId?: string | null;
   label?: string;
+  /** Shown under/beside the ⋯ trigger when variant is overflow */
+  triggerLabel?: string;
   /** text = link button; overflow = ⋯ menu with Report item */
   variant?: "text" | "overflow";
 };
@@ -33,6 +35,7 @@ export function ReportButton({
   datacutId = null,
   creatorId = null,
   label = "Report",
+  triggerLabel,
   variant = "text",
 }: Props) {
   const { user } = useAuth();
@@ -125,21 +128,24 @@ export function ReportButton({
       <div className="listing-row-menu detail-report-menu" ref={menuRef}>
         <button
           type="button"
-          className="listing-row-menu-trigger"
-          aria-label="More actions"
+          className={
+            triggerLabel ? "detail-action listing-row-menu-trigger" : "listing-row-menu-trigger"
+          }
+          aria-label={triggerLabel ?? "More actions"}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           aria-controls={menuId}
           onClick={() => setMenuOpen((value) => !value)}
         >
           <Icon name="more" size={18} />
+          {triggerLabel ? <span>{triggerLabel}</span> : null}
         </button>
         {menuOpen ? (
           <div
             className="listing-row-menu-panel"
             id={menuId}
             role="menu"
-            aria-label="More actions"
+            aria-label={triggerLabel ?? "More actions"}
           >
             <div className="listing-row-menu-items">
               <button

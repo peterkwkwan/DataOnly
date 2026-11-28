@@ -17,6 +17,7 @@ export type IconName =
   | "menu"
   | "more"
   | "search"
+  | "share"
   | "shield"
   | "spark"
   | "star"
@@ -105,6 +106,14 @@ export function Icon({
       <>
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-4-4" />
+      </>
+    ),
+    share: (
+      <>
+        <circle cx="18" cy="5" r="2.5" />
+        <circle cx="6" cy="12" r="2.5" />
+        <circle cx="18" cy="19" r="2.5" />
+        <path d="m8.3 13.2 7.4 4.1M15.7 6.7l-7.4 4.1" />
       </>
     ),
     shield: (
