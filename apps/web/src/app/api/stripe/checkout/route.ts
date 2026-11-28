@@ -12,6 +12,7 @@ import {
   isAllowedMobileReturnUrl,
   mobileCheckoutBridgeUrl,
 } from "@/lib/stripe/mobile-return";
+import { isCreatorConnectReady } from "@/lib/stripe/connect-ready";
 import {
   createServiceSupabaseClient,
   hasServiceRoleKey,
@@ -121,7 +122,10 @@ export async function POST(request: Request) {
   }
 
   const creator = creatorRow as CheckoutCreator | null;
-  if (!creator?.stripe_account_id || !creator.stripe_charges_enabled) {
+  if (
+    !creator ||
+    !isCreatorConnectReady(creator.stripe_account_id, creator.stripe_charges_enabled)
+  ) {
     console.error(
       "[stripe checkout] creator not ready for destination charges",
       {
@@ -140,6 +144,8 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   }
+
+  const stripeAccountId = creator.stripe_account_id!.trim();
 
   if (creator.user_id && creator.user_id === user.id) {
     return NextResponse.json({ error: "You cannot purchase your own datacut" }, { status: 400 });
@@ -227,7 +233,7 @@ export async function POST(request: Request) {
       payment_intent_data: {
         application_fee_amount: fee,
         transfer_data: {
-          destination: creator.stripe_account_id,
+          destination: stripeAccountId,
         },
         // Fallback if Checkout Session metadata is sparse in a webhook payload.
         metadata: {
@@ -236,7 +242,7 @@ export async function POST(request: Request) {
           license,
           license_version: LICENSE_TEMPLATE_VERSION,
           creator_id: creator.id,
-          stripe_account_id: creator.stripe_account_id,
+          stripe_account_id: stripeAccountId,
           platform_fee_cents: String(fee),
         },
       },
@@ -247,7 +253,7 @@ export async function POST(request: Request) {
         license,
         license_version: LICENSE_TEMPLATE_VERSION,
         creator_id: creator.id,
-        stripe_account_id: creator.stripe_account_id,
+        stripe_account_id: stripeAccountId,
         platform_fee_cents: String(fee),
         platform_fee_percent: String(getPlatformFeePercent()),
       },

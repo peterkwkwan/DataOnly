@@ -15,6 +15,10 @@ import type { Category, Datacut, LicenseTemplate, ListingStatus } from "@dataonl
 import { licenseBlurb } from "@dataonly/core";
 import { Icon } from "@/components/icons";
 import { MenuSelect } from "@/components/menu-select";
+import {
+  isCreatorConnectReady,
+  PUBLISH_REQUIRES_PAYOUTS,
+} from "@/lib/stripe/connect-ready";
 import { formatClientError } from "@/lib/errors";
 import { buildDatacutObjectPath, DATACUT_STORAGE_BUCKET, sanitizeFileName } from "@/lib/storage";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -29,6 +33,8 @@ const STATUS_OPTIONS: { value: ListingStatus; label: string }[] = [
   { value: "published", label: "Published" },
   { value: "unpublished", label: "Unpublished (moderation)" },
 ];
+
+const PAYOUTS_HREF = "/account?tab=payment";
 
 /** Approved formats; labels match existing `datacuts.format` text values. */
 export const FORMAT_OPTIONS = [
@@ -88,11 +94,17 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
   const [activeOption, setActiveOption] = useState(() =>
     Math.max(0, FORMAT_OPTIONS.indexOf(normalizeFormat(initial?.format))),
   );
+  const [connectReady, setConnectReady] = useState<boolean | null>(null);
   const formatFieldId = useId();
   const formatListboxId = `${formatFieldId}-listbox`;
   const formatRef = useRef<HTMLDivElement>(null);
 
   const blurb = useMemo(() => licenseBlurb(license), [license]);
+
+  const statusOptions = useMemo(() => {
+    if (connectReady !== false) return STATUS_OPTIONS;
+    return STATUS_OPTIONS.filter((option) => option.value !== "published");
+  }, [connectReady]);
 
   const canSave = useMemo(() => {
     const priceNum = Number(price);
@@ -106,9 +118,37 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
       Boolean(format) &&
       Boolean(license) &&
       description.trim().length > 0 &&
-      Boolean(status)
+      Boolean(status) &&
+      (status !== "published" || connectReady === true)
     );
-  }, [title, slug, categoryId, price, format, license, description, status]);
+  }, [title, slug, categoryId, price, format, license, description, status, connectReady]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConnect() {
+      try {
+        const res = await fetch("/api/stripe/connect/status");
+        const data = (await res.json()) as {
+          accountId?: string | null;
+          chargesEnabled?: boolean;
+          error?: string;
+        };
+        if (!res.ok) throw new Error(data.error ?? "Failed to load payout status");
+        if (cancelled) return;
+        const ready = isCreatorConnectReady(data.accountId, data.chargesEnabled);
+        setConnectReady(ready);
+        if (!ready) {
+          setStatus((current) => (current === "published" ? "draft" : current));
+        }
+      } catch {
+        if (!cancelled) setConnectReady(false);
+      }
+    }
+    void loadConnect();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!formatOpen) return;
@@ -165,11 +205,16 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!canSave || busy) return;
+    if (status === "published" && connectReady !== true) {
+      setError(PUBLISH_REQUIRES_PAYOUTS);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
       const payload = {
+        id: initial?.id,
         title: title.trim(),
         slug: (slug || slugify(title)).trim(),
         creator_id: creatorId,
@@ -184,25 +229,27 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
         accent: initial?.accent ?? "#c6ff4a",
         art: initial?.art ?? "data",
         updated_label: `Updated ${new Date().toLocaleDateString()}`,
-        updated_at: new Date().toISOString(),
       };
 
-      let datacutId = initial?.id;
-      if (initial) {
-        const { error: updateError } = await supabase
-          .from("datacuts")
-          .update(payload)
-          .eq("id", initial.id);
-        if (updateError) throw updateError;
-      } else {
-        const { data: inserted, error: insertError } = await supabase
-          .from("datacuts")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (insertError) throw insertError;
-        datacutId = Number(inserted.id);
+      const saveRes = await fetch("/api/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const saveData = (await saveRes.json()) as {
+        id?: number;
+        error?: string;
+        code?: string;
+      };
+      if (!saveRes.ok) {
+        if (saveData.code === "connect_not_ready") {
+          setConnectReady(false);
+          setStatus("draft");
+        }
+        throw new Error(saveData.error ?? "Save failed");
       }
+
+      let datacutId = saveData.id ?? initial?.id;
 
       if (file && datacutId) {
         const objectPath = buildDatacutObjectPath(creatorId, datacutId, file.name);
@@ -369,9 +416,17 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
       <MenuSelect
         label="Status *"
         value={status}
-        options={STATUS_OPTIONS}
+        options={statusOptions}
         onChange={setStatus}
       />
+      {connectReady === false ? (
+        <p className="form-footnote" role="status">
+          {PUBLISH_REQUIRES_PAYOUTS}{" "}
+          <Link className="text-button" href={PAYOUTS_HREF}>
+            Set up payouts
+          </Link>
+        </p>
+      ) : null}
       <label>
         Dataset file
         <input
