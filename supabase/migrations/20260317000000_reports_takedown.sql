@@ -76,11 +76,18 @@ create policy "reports_admin_delete" on public.reports
 grant select, insert on public.reports to anon, authenticated;
 grant update, delete on public.reports to authenticated;
 
--- Hidden creators: public catalog hides them; owner + admin still see
+-- Hidden creators: directory/storefront hide in app; owner + admin always see.
+-- Published-cut attribution stays readable so embeds / id lookups are not "Unknown creator".
 drop policy if exists "creators_public_read" on public.creators;
 create policy "creators_public_read" on public.creators
   for select using (
     hidden = false
     or user_id = auth.uid()
     or public.is_admin()
+    or exists (
+      select 1
+      from public.datacuts d
+      where d.creator_id = creators.id
+        and d.status = 'published'
+    )
   );

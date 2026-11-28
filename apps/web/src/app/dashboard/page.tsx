@@ -10,7 +10,7 @@ import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
 import { catalog } from "@/lib/catalog";
 import { ensureCreatorForUser } from "@/lib/creator";
-import { formatClientError } from "@/lib/errors";
+import { datacutDeleteBlockedMessage, formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Creator, Datacut, ListingStatus } from "@dataonly/core";
 import { mapDatacut, mapEntitlement, type DatacutRow, type EntitlementRow } from "@dataonly/core";
@@ -131,8 +131,16 @@ function DashboardPageContent() {
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
+      // entitlements/purchases are ON DELETE RESTRICT — refuse with UX when buyers exist.
       const { error: deleteError } = await supabase.from("datacuts").delete().eq("id", cut.id);
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        const blocked = datacutDeleteBlockedMessage(deleteError);
+        if (blocked) {
+          setError(blocked);
+          return;
+        }
+        throw deleteError;
+      }
       setListings((prev) => prev.filter((item) => item.id !== cut.id));
     } catch (err) {
       setError(formatClientError(err, "Failed to delete listing"));

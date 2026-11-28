@@ -41,10 +41,55 @@ function normalize(value: string) {
   return value.trim().toLowerCase();
 }
 
+// Embed can null out under RLS; we always fill names via creator_id (same pattern as checkout).
 const DATACUT_SELECT =
   "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, updated_at, format, license, description, status, storage_path, file_name, sample_storage_path, sample_file_name, creators(name, verified), categories(name)";
 
+function embedCreatorName(
+  rel: DatacutRow["creators"],
+): string | null {
+  if (!rel) return null;
+  if (Array.isArray(rel)) return rel[0]?.name?.trim() || null;
+  return rel.name?.trim() || null;
+}
+
 export function createSupabaseCatalog(client: SupabaseClient): AsyncCatalogRepository {
+  /** When creators(...) is null/empty (hidden RLS / missing embed), load by creator_id. */
+  async function withCreatorNames(rows: DatacutRow[]): Promise<DatacutRow[]> {
+    const needIds = [
+      ...new Set(
+        rows
+          .filter((row) => !embedCreatorName(row.creators))
+          .map((row) => row.creator_id)
+          .filter(Boolean),
+      ),
+    ];
+    if (needIds.length === 0) return rows;
+
+    const { data, error } = await client
+      .from("creators")
+      .select("id, name, verified")
+      .in("id", needIds);
+    if (error) throw error;
+
+    const byId = new Map(
+      ((data ?? []) as { id: string; name: string; verified?: boolean | null }[]).map((row) => [
+        row.id,
+        { name: row.name, verified: row.verified },
+      ]),
+    );
+
+    return rows.map((row) => {
+      if (embedCreatorName(row.creators)) return row;
+      const creator = byId.get(row.creator_id);
+      return creator ? { ...row, creators: creator } : row;
+    });
+  }
+
+  async function mapDatacutRows(rows: DatacutRow[]): Promise<Datacut[]> {
+    return (await withCreatorNames(rows)).map(mapDatacut);
+  }
+
   async function loadPublished(opts: {
     categoryId?: string;
     creatorId?: string;
@@ -54,7 +99,7 @@ export function createSupabaseCatalog(client: SupabaseClient): AsyncCatalogRepos
     if (opts.creatorId) query = query.eq("creator_id", opts.creatorId);
     const { data, error } = await query.order("id", { ascending: true });
     if (error) throw error;
-    return ((data ?? []) as DatacutRow[]).map(mapDatacut);
+    return mapDatacutRows((data ?? []) as DatacutRow[]);
   }
 
   return {
@@ -71,13 +116,23 @@ export function createSupabaseCatalog(client: SupabaseClient): AsyncCatalogRepos
     },
 
     async getCreators() {
-      const { data, error } = await client.from("creators").select("*").order("name");
+      // Storefront directory: hide takedown-hidden creators (RLS may still allow attribution reads).
+      const { data, error } = await client
+        .from("creators")
+        .select("*")
+        .eq("hidden", false)
+        .order("name");
       if (error) throw error;
       return ((data ?? []) as CreatorRow[]).map(mapCreator);
     },
 
     async getCreatorBySlug(slug) {
-      const { data, error } = await client.from("creators").select("*").eq("slug", slug).maybeSingle();
+      const { data, error } = await client
+        .from("creators")
+        .select("*")
+        .eq("slug", slug)
+        .eq("hidden", false)
+        .maybeSingle();
       if (error) throw error;
       return data ? mapCreator(data as CreatorRow) : undefined;
     },
@@ -89,7 +144,7 @@ export function createSupabaseCatalog(client: SupabaseClient): AsyncCatalogRepos
         if (opts.creatorId) query = query.eq("creator_id", opts.creatorId);
         const { data, error } = await query.order("id", { ascending: true });
         if (error) throw error;
-        return ((data ?? []) as DatacutRow[]).map(mapDatacut);
+        return mapDatacutRows((data ?? []) as DatacutRow[]);
       }
       return loadPublished(opts);
     },
@@ -102,7 +157,9 @@ export function createSupabaseCatalog(client: SupabaseClient): AsyncCatalogRepos
         .eq("status", "published")
         .maybeSingle();
       if (error) throw error;
-      return data ? mapDatacut(data as DatacutRow) : undefined;
+      if (!data) return undefined;
+      const [cut] = await mapDatacutRows([data as DatacutRow]);
+      return cut;
     },
 
     async getPopularDatacuts(limit = 4) {

@@ -8,6 +8,57 @@ export function isDbPermissionError(
   return msg.includes("permission denied");
 }
 
+/**
+ * Hard-delete blocked by entitlements/purchases FK (ON DELETE RESTRICT → 23503).
+ * Prefer unpublish when the listing has buyers.
+ */
+export function datacutDeleteBlockedMessage(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const code =
+    "code" in err && typeof (err as { code: unknown }).code === "string"
+      ? (err as { code: string }).code
+      : "";
+  const message =
+    "message" in err && typeof (err as { message: unknown }).message === "string"
+      ? (err as { message: string }).message
+      : "";
+  const details =
+    "details" in err && typeof (err as { details: unknown }).details === "string"
+      ? (err as { details: string }).details
+      : "";
+  const blob = `${message} ${details}`.toLowerCase();
+  const isFk = code === "23503" || blob.includes("foreign key") || blob.includes("violates");
+  if (!isFk) return null;
+  if (
+    blob.includes("entitlements") ||
+    blob.includes("purchases") ||
+    blob.includes("entitlements_datacut_id_fkey") ||
+    blob.includes("purchases_datacut_id_fkey")
+  ) {
+    return "This listing has buyers — unpublish it instead of deleting.";
+  }
+  if (code === "23503") {
+    return "This listing can’t be deleted because related records still reference it. Unpublish it instead.";
+  }
+  return null;
+}
+
+function assertDatacutDeleteBlockedMessage() {
+  const buyers = datacutDeleteBlockedMessage({
+    code: "23503",
+    message: "update or delete on table \"datacuts\" violates foreign key constraint",
+    details: "Key is still referenced from table \"entitlements\".",
+  });
+  const other = datacutDeleteBlockedMessage({ code: "42501", message: "permission denied" });
+  if (
+    buyers !== "This listing has buyers — unpublish it instead of deleting." ||
+    other !== null
+  ) {
+    throw new Error("datacutDeleteBlockedMessage");
+  }
+}
+assertDatacutDeleteBlockedMessage();
+
 /** Extract a readable message from Error, PostgREST, Auth, or plain `{ message }` throws. */
 export function formatClientError(err: unknown, fallback: string): string {
   let message = fallback;

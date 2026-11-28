@@ -81,6 +81,23 @@ grant select, update on public.creators to service_role;
 grant select, update on public.datacuts to service_role;
 ```
 
+   **Published cuts show “Unknown creator” for other users?** Paste `supabase/migrations/20260326000000_creator_attribution_read.sql` (or the policy below) so takedown-hidden creators stay readable for published-cut attribution:
+
+```sql
+drop policy if exists "creators_public_read" on public.creators;
+create policy "creators_public_read" on public.creators
+  for select using (
+    hidden = false
+    or user_id = auth.uid()
+    or public.is_admin()
+    or exists (
+      select 1 from public.datacuts d
+      where d.creator_id = creators.id and d.status = 'published'
+    )
+  );
+```
+
+
    **Already ran init + rls once?** Paste this in SQL Editor (same as `20260311000002_grants.sql`) — do not re-run full init:
 
 ```sql
