@@ -8,12 +8,14 @@ import { DatacutCard } from "@/components/datacut-card";
 import { ListingRowMenu } from "@/components/listing-row-menu";
 import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
-import { catalog } from "@/lib/catalog";
 import { ensureCreatorForUser } from "@/lib/creator";
 import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Creator, Datacut, ListingStatus } from "@dataonly/core";
 import { mapDatacut, mapEntitlement, type DatacutRow, type EntitlementRow } from "@dataonly/core";
+
+const DATACUT_SELECT =
+  "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, storage_path, file_name, sample_storage_path, sample_file_name, creators(name, verified), categories(name)";
 
 const LISTING_PILL_LABELS: Record<ListingStatus, string> = {
   draft: "DRAFT",
@@ -50,6 +52,30 @@ function assertDefaultDashboardTab() {
   }
 }
 assertDefaultDashboardTab();
+
+/** Saved panel body once hydrated — never show “empty library” when bookmarks exist. */
+function savedPanelKind(
+  savedBusy: boolean,
+  cutCount: number,
+  savedIdCount: number,
+): "loading" | "grid" | "unavailable" | "empty" {
+  if (savedBusy) return "loading";
+  if (cutCount > 0) return "grid";
+  if (savedIdCount > 0) return "unavailable";
+  return "empty";
+}
+
+function assertSavedPanelKind() {
+  if (
+    savedPanelKind(true, 0, 2) !== "loading" ||
+    savedPanelKind(false, 2, 2) !== "grid" ||
+    savedPanelKind(false, 0, 2) !== "unavailable" ||
+    savedPanelKind(false, 0, 0) !== "empty"
+  ) {
+    throw new Error("savedPanelKind");
+  }
+}
+assertSavedPanelKind();
 
 type PurchasedCut = {
   entitlementId: string;
@@ -138,6 +164,9 @@ function DashboardPageContent() {
   const [creator, setCreator] = useState<Creator | null>(null);
   const [listings, setListings] = useState<Datacut[]>([]);
   const [purchased, setPurchased] = useState<PurchasedCut[]>([]);
+  const [savedCuts, setSavedCuts] = useState<Datacut[]>([]);
+  const [savedLoadError, setSavedLoadError] = useState<string | null>(null);
+  const [savedBusy, setSavedBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Action failures must not reuse load `error` — that gate hides the listings table.
   const [actionError, setActionError] = useState<string | null>(null);
@@ -235,9 +264,7 @@ function DashboardPageContent() {
           await Promise.all([
             supabase
               .from("datacuts")
-              .select(
-                "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, storage_path, file_name, sample_storage_path, sample_file_name, creators(name, verified), categories(name)",
-              )
+              .select(DATACUT_SELECT)
               .eq("creator_id", ensured.id)
               .order("updated_at", { ascending: false }),
             supabase
@@ -288,6 +315,53 @@ function DashboardPageContent() {
     tabLocked.current = true;
     setTab(next);
   }, [searchParams]);
+
+  // Resolve saved cards from live datacuts (mock catalog is ids 1–4 only).
+  useEffect(() => {
+    if (!hydrated || !configured || !user) {
+      setSavedCuts([]);
+      setSavedLoadError(null);
+      setSavedBusy(false);
+      return;
+    }
+    if (savedIds.length === 0) {
+      setSavedCuts([]);
+      setSavedLoadError(null);
+      setSavedBusy(false);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadSavedCuts() {
+      setSavedBusy(true);
+      setSavedLoadError(null);
+      try {
+        const supabase = createBrowserSupabaseClient();
+        const { data, error: loadError } = await supabase
+          .from("datacuts")
+          .select(DATACUT_SELECT)
+          .in("id", savedIds);
+        if (loadError) throw loadError;
+        if (cancelled) return;
+        const byId = new Map(
+          ((data ?? []) as DatacutRow[]).map(mapDatacut).map((cut) => [cut.id, cut]),
+        );
+        setSavedCuts(
+          savedIds.map((id) => byId.get(id)).filter((cut): cut is Datacut => cut !== undefined),
+        );
+      } catch (err) {
+        if (cancelled) return;
+        setSavedCuts([]);
+        setSavedLoadError(formatClientError(err, "Failed to load saved datacuts"));
+      } finally {
+        if (!cancelled) setSavedBusy(false);
+      }
+    }
+    void loadSavedCuts();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, hydrated, savedIds, user]);
 
   if (!isSupabaseConfigured()) {
     return (
@@ -365,9 +439,9 @@ function DashboardPageContent() {
     window.history.replaceState(null, "", `/dashboard?tab=${next}`);
   }
 
-  // Client catalog is mock (ids 1–4); those match supabase/seed.sql. Live-only
-  // listing ids still count in savedIds but may not resolve to a card here.
-  const savedCuts = catalog.getDatacuts().filter((cut) => savedIds.includes(cut.id));
+  const savedKind = hydrated
+    ? savedPanelKind(savedBusy, savedCuts.length, savedIds.length)
+    : null;
 
   return (
     <section className="page-view dashboard-view">
@@ -553,13 +627,27 @@ function DashboardPageContent() {
               {syncError}
             </p>
           ) : null}
-          {!hydrated ? null : savedCuts.length ? (
+          {savedLoadError ? (
+            <p className="form-error" role="status" style={{ marginBottom: 16 }}>
+              {savedLoadError}
+            </p>
+          ) : null}
+          {savedKind === "loading" ? (
+            <p className="empty-hint">Loading saved datacuts…</p>
+          ) : null}
+          {savedKind === "grid" ? (
             <div className="datacut-grid page-grid">
               {savedCuts.map((cut) => (
                 <DatacutCard key={cut.id} cut={cut} />
               ))}
             </div>
-          ) : (
+          ) : null}
+          {savedKind === "unavailable" ? (
+            <p className="empty-hint">
+              Saved items could not be shown (unpublished or removed).
+            </p>
+          ) : null}
+          {savedKind === "empty" ? (
             <div className="m-empty-state">
               <h3>Your library is empty</h3>
               <p>Save datacuts to compare or purchase later.</p>
@@ -567,7 +655,7 @@ function DashboardPageContent() {
                 Explore marketplace
               </Link>
             </div>
-          )}
+          ) : null}
         </>
       ) : null}
     </section>

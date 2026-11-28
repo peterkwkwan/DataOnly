@@ -131,5 +131,6 @@ grant select, update on public.datacuts to service_role;
 grant usage, select on sequence public.datacuts_id_seq to anon, authenticated;
 
 grant select, insert, update, delete on public.saved to authenticated;
+grant select on public.saved to service_role;
 
 grant select, insert, update, delete on public.verification_applications to authenticated;
