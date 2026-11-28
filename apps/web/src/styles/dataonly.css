@@ -4235,3 +4235,92 @@ code {
   gap: 8px;
   align-items: center;
 }
+
+.receipt-page {
+  max-width: 720px;
+}
+.receipt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.receipt-sheet {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  display: grid;
+  gap: 24px;
+}
+.receipt-header {
+  display: grid;
+  gap: 12px;
+}
+.receipt-header h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+}
+.receipt-fields {
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.receipt-fields > div {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.receipt-fields dt {
+  margin: 0;
+  color: #6f7b75;
+  font-size: 13px;
+}
+.receipt-fields dd {
+  margin: 0;
+  font-size: 15px;
+}
+.receipt-meta {
+  display: block;
+  margin-top: 4px;
+  color: #84908a;
+  font-size: 12px;
+  word-break: break-all;
+}
+.receipt-footnote {
+  margin: 0;
+  color: #84908a;
+  font-size: 12px;
+}
+
+@media print {
+  .topbar,
+  footer,
+  .bottom-nav,
+  .mobile-menu,
+  .mobile-app-prototype,
+  .receipt-no-print {
+    display: none !important;
+  }
+  .app-shell,
+  .web-portal,
+  main,
+  .page-view,
+  .receipt-page,
+  .receipt-sheet {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    max-width: none !important;
+  }
+  .receipt-fields > div {
+    grid-template-columns: 120px 1fr;
+    break-inside: avoid;
+  }
+}

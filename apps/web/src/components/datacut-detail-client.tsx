@@ -56,6 +56,7 @@ export function DatacutDetailClient({
   const [sampleBusy, setSampleBusy] = useState(false);
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [receiptHref, setReceiptHref] = useState<string | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [sharePop, setSharePop] = useState(false);
   const [liveRating, setLiveRating] = useState(cut.rating);
@@ -142,6 +143,25 @@ export function DatacutDetailClient({
     const sessionId = searchParams.get("session_id");
     let cancelled = false;
 
+    async function resolveReceiptHref(): Promise<string> {
+      const fallback = "/account?tab=purchases";
+      if (!sessionId?.startsWith("cs_") || !configured || !user || !isSupabaseConfigured()) {
+        return fallback;
+      }
+      try {
+        const supabase = createBrowserSupabaseClient();
+        const { data } = await supabase
+          .from("purchases")
+          .select("id")
+          .eq("stripe_checkout_session_id", sessionId)
+          .maybeSingle();
+        if (data?.id) return `/account/purchases/${data.id}/receipt`;
+      } catch {
+        /* fall through to Purchases tab */
+      }
+      return fallback;
+    }
+
     async function confirmAndRefresh() {
       setBanner("Payment received. Activating access…");
       if (sessionId?.startsWith("cs_") && configured && user) {
@@ -172,7 +192,11 @@ export function DatacutDetailClient({
       } else if (!cancelled) {
         setBanner("Payment received. Access usually activates within a few seconds.");
       }
-      if (!cancelled) await refreshEntitlement();
+      if (!cancelled) {
+        const href = await resolveReceiptHref();
+        if (!cancelled) setReceiptHref(href);
+        await refreshEntitlement();
+      }
     }
 
     void confirmAndRefresh();
@@ -343,7 +367,17 @@ export function DatacutDetailClient({
             <div className="buy-license">{cut.licenseBlurb}</div>
             <div className="detail-price">${cut.price} USD</div>
 
-            {banner ? <p className="empty-hint">{banner}</p> : null}
+            {banner ? (
+              <p className="empty-hint">
+                {banner}
+                {receiptHref ? (
+                  <>
+                    {" "}
+                    <Link href={receiptHref}>View receipt</Link>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {isOwner ? (

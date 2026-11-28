@@ -610,6 +610,14 @@ export function PurchaseHistory({ userId }: { userId: string }) {
                   </span>
                 </div>
                 <div className="listing-row-actions">
+                  <Link
+                    className="text-button"
+                    href={`/account/purchases/${row.id}/receipt`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Receipt
+                  </Link>
                   <button
                     type="button"
                     className="text-button"
