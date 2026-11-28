@@ -27,6 +27,13 @@ export default async function CreatorStorefrontPage({ params }: Props) {
   if (!creator) notFound();
 
   const cuts = await catalog.getDatacuts({ creatorId: creator.id });
+  const rated = cuts.filter((c) => c.reviews > 0);
+  const storefrontRating =
+    rated.length > 0
+      ? Math.round(
+          (rated.reduce((sum, c) => sum + c.rating, 0) / rated.length) * 100,
+        ) / 100
+      : null;
 
   return (
     <section className="page-view creators-view">
@@ -76,7 +83,7 @@ export default async function CreatorStorefrontPage({ params }: Props) {
               <b>{creator.followers}</b> Followers
             </span>
             <span>
-              <b>4.9</b> Rating
+              <b>{storefrontRating ?? "—"}</b> Rating
             </span>
           </div>
         </div>

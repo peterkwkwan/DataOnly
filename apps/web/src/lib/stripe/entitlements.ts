@@ -230,7 +230,7 @@ export async function markEntitlementRefundedByPaymentIntent(
     })
     .eq("stripe_payment_intent_id", piId)
     .in("status", ["active", "pending"])
-    .select("id");
+    .select("id, user_id, datacut_id");
 
   if (error) {
     throw new Error(
@@ -238,6 +238,28 @@ export async function markEntitlementRefundedByPaymentIntent(
     );
   }
 
-  const entitlementIds = (data ?? []).map((row) => row.id as string);
+  const rows = data ?? [];
+  for (const row of rows) {
+    const userId = row.user_id as string;
+    const datacutId = Number(row.datacut_id);
+    if (!userId || !Number.isFinite(datacutId)) continue;
+    const { error: hideError } = await admin
+      .from("reviews")
+      .update({
+        visible: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("datacut_id", datacutId)
+      .eq("visible", true);
+    if (hideError) {
+      console.warn(
+        "[stripe entitlements] hide review after refund failed:",
+        hideError.message,
+      );
+    }
+  }
+
+  const entitlementIds = rows.map((row) => row.id as string);
   return { updated: entitlementIds.length, entitlementIds };
 }

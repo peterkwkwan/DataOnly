@@ -33,6 +33,8 @@ export {
   isReportStatus,
   validateReportInput,
 } from "./reports";
+export type { Review, ReviewRow } from "./reviews";
+export { mapReview, validateReviewInput } from "./reviews";
 export {
   LICENSE_SUMMARIES,
   LICENSE_TEMPLATE_VERSION,

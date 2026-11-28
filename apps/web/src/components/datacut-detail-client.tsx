@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Art } from "@/components/brand";
 import { BuyModal } from "@/components/buy-modal";
+import { DatacutReviews } from "@/components/datacut-reviews";
 import { Icon } from "@/components/icons";
 import { ReportButton } from "@/components/report-button";
 import { useAuth } from "@/context/auth-context";
@@ -55,6 +56,8 @@ export function DatacutDetailClient({
   const [sampleBusy, setSampleBusy] = useState(false);
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [liveRating, setLiveRating] = useState(cut.rating);
+  const [liveReviews, setLiveReviews] = useState(cut.reviews);
   const saved = isSaved(cut.id);
   const verified = creatorVerified || !!cut.creatorVerified;
   const isOwner = !!user && !!creatorUserId && user.id === creatorUserId;
@@ -253,7 +256,7 @@ export function DatacutDetailClient({
             {verified ? <Icon name="shield" size={13} /> : null}
           </Link>
           <span>
-            <Icon name="star" size={14} filled /> {cut.rating} ({cut.reviews})
+            <Icon name="star" size={14} filled /> {liveRating} ({liveReviews})
           </span>
           <span className="detail-meta-updated">
             {cut.updated}
@@ -370,6 +373,17 @@ export function DatacutDetailClient({
             </p>
           </div>
         ) : null}
+
+        <DatacutReviews
+          datacutId={cut.id}
+          entitled={entitled}
+          headerRating={cut.rating}
+          headerReviews={cut.reviews}
+          onSummaryChange={(summary) => {
+            setLiveRating(summary.rating);
+            setLiveReviews(summary.count);
+          }}
+        />
       </div>
       <BuyModal
         cut={cut}

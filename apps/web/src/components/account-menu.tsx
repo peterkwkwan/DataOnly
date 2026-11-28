@@ -144,6 +144,19 @@ export function AccountMenu() {
                   <Icon name="shield" size={16} />
                   Reports
                 </Link>
+                <Link
+                  role="menuitem"
+                  className={
+                    pathname.startsWith("/admin/reviews")
+                      ? "account-menu-item active"
+                      : "account-menu-item"
+                  }
+                  href="/admin/reviews"
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon name="star" size={16} />
+                  Reviews
+                </Link>
               </>
             ) : null}
           </div>

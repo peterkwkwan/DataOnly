@@ -178,6 +178,8 @@ export default function AdminVerificationPage() {
           <Link href="/admin/refunds">Refunds</Link>
           {" · "}
           <Link href="/admin/reports">Reports</Link>
+          {" · "}
+          <Link href="/admin/reviews">Reviews</Link>
         </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}

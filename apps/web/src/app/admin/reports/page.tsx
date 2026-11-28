@@ -209,6 +209,8 @@ export default function AdminReportsPage() {
           <Link href="/admin/verification">Verification</Link>
           {" · "}
           <Link href="/admin/refunds">Refunds</Link>
+          {" · "}
+          <Link href="/admin/reviews">Reviews</Link>
         </p>
       </div>
 

@@ -297,7 +297,8 @@ export default function AdminRefundsPage() {
           Buyers request a refund from Account → Purchases. You issue it here. Each Checkout is
           its own line. Refunding the line that currently pays for access removes download access.
           A downloaded line can&apos;t be refunded. A request older than 14 days can still be
-          refunded here.
+          refunded here.{" "}
+          <Link href="/admin/reviews">Reviews</Link>
         </p>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
