@@ -670,6 +670,8 @@
 .float-card {
   position: absolute;
   z-index: 3;
+  left: 50%;
+  top: 50%;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
   border: 1px solid white;
@@ -678,6 +680,10 @@
   padding: 15px 18px;
   display: flex;
   flex-direction: column;
+  /* orbit: rotate around hub, counter-rotate so card stays upright */
+  transform: translate(-50%, -50%) rotate(var(--orbit-start)) translateX(var(--orbit-r))
+    rotate(calc(0deg - var(--orbit-start)));
+  animation: hero-orbit var(--orbit-duration) linear infinite;
 }
 .float-card span {
   color: #7b8982;
@@ -691,17 +697,35 @@
   color: #87918d;
   font-size: 10px;
 }
+@keyframes hero-orbit {
+  from {
+    transform: translate(-50%, -50%) rotate(var(--orbit-start)) translateX(var(--orbit-r))
+      rotate(calc(0deg - var(--orbit-start)));
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(calc(var(--orbit-start) + 360deg))
+      translateX(var(--orbit-r)) rotate(calc(0deg - (var(--orbit-start) + 360deg)));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .float-card {
+    animation: none;
+  }
+}
 .card-a {
-  left: 1%;
-  top: 14%;
+  --orbit-r: 200px;
+  --orbit-start: -135deg;
+  --orbit-duration: 56s;
 }
 .card-b {
-  right: 1%;
-  bottom: 14%;
+  --orbit-r: 175px;
+  --orbit-start: 45deg;
+  --orbit-duration: 48s;
 }
 .card-c {
-  left: 5%;
-  bottom: 7%;
+  --orbit-r: 155px;
+  --orbit-start: 135deg;
+  --orbit-duration: 40s;
   height: 75px;
   width: 130px;
   flex-direction: row;
