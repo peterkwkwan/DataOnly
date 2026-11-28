@@ -11,7 +11,11 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 
 import { Icon } from "@/components/icons";
 import { MenuSelect } from "@/components/menu-select";
 import {
+  cardBrand,
   formatCardExpiry,
+  formatCardNumberInput,
+  formatCvcInput,
+  formatExpiryInput,
   parseDeviceCard,
   type DeviceCard,
 } from "@/lib/device-payment-method";
@@ -497,6 +501,8 @@ function PaymentMethod({ userId }: { userId: string }) {
     setError(null);
   }, [userId]);
 
+  const liveBrand = cardBrand(number.replace(/\s+/g, ""));
+
   function clearForm() {
     setName("");
     setNumber("");
@@ -566,12 +572,24 @@ function PaymentMethod({ userId }: { userId: string }) {
           </label>
           <label>
             Card number
-            <input
-              inputMode="numeric"
-              autoComplete="off"
-              value={number}
-              onChange={(event) => setNumber(event.target.value)}
-            />
+            <span className="payment-card-number-field">
+              <input
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={23}
+                value={number}
+                onChange={(event) => {
+                  const next = formatCardNumberInput(event.target.value);
+                  setNumber(next);
+                  setCvc((prev) => formatCvcInput(prev, cardBrand(next.replace(/\s+/g, ""))));
+                }}
+              />
+              {number.replace(/\s+/g, "").length > 0 ? (
+                <span className="payment-card-brand" aria-live="polite">
+                  {liveBrand}
+                </span>
+              ) : null}
+            </span>
           </label>
           <label>
             Expiry (MM/YY)
@@ -579,8 +597,9 @@ function PaymentMethod({ userId }: { userId: string }) {
               inputMode="numeric"
               autoComplete="off"
               placeholder="MM/YY"
+              maxLength={5}
               value={expiry}
-              onChange={(event) => setExpiry(event.target.value)}
+              onChange={(event) => setExpiry(formatExpiryInput(event.target.value))}
             />
           </label>
           <label>
@@ -588,8 +607,9 @@ function PaymentMethod({ userId }: { userId: string }) {
             <input
               inputMode="numeric"
               autoComplete="off"
+              maxLength={liveBrand === "Amex" ? 4 : 3}
               value={cvc}
-              onChange={(event) => setCvc(event.target.value)}
+              onChange={(event) => setCvc(formatCvcInput(event.target.value, liveBrand))}
             />
           </label>
           <p className="form-footnote">

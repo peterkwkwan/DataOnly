@@ -3391,6 +3391,24 @@ footer button {
   gap: 12px;
   margin-top: 8px;
 }
+.payment-card-number-field {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.payment-card-number-field input {
+  padding-right: 6.5rem;
+}
+.payment-card-brand {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  pointer-events: none;
+}
 /* large-avatar is absolute on the store card; keep this preview in the form flow */
 .account-profile-form .large-avatar {
   position: static;
