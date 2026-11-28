@@ -7,7 +7,8 @@ import {
   type RefundEligibilityInput,
 } from "@dataonly/core";
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { Icon } from "@/components/icons";
 import { MenuSelect } from "@/components/menu-select";
 import {
   formatCardExpiry,
@@ -176,6 +177,93 @@ function eligibilityInput(row: HistoryRow): RefundEligibilityInput {
     entitlementStatus: row.entitlement?.status ?? null,
     entitlementDownloadedAt: row.entitlement?.downloadedAt ?? null,
   };
+}
+
+function PurchaseRowMenu({
+  title,
+  receiptHref,
+  onGetHelp,
+}: {
+  title: string;
+  receiptHref: string;
+  onGetHelp: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (rootRef.current && target && !rootRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="listing-row-menu" ref={rootRef}>
+      <button
+        type="button"
+        className="listing-row-menu-trigger"
+        aria-label={`Actions for ${title}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={menuId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="more" size={18} />
+      </button>
+
+      {open ? (
+        <div
+          className="listing-row-menu-panel"
+          id={menuId}
+          role="menu"
+          aria-label={`Actions for ${title}`}
+        >
+          <div className="listing-row-menu-items">
+            <Link
+              role="menuitem"
+              className="listing-row-menu-item"
+              href={receiptHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+            >
+              Receipt
+            </Link>
+            <button
+              type="button"
+              role="menuitem"
+              className="listing-row-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onGetHelp();
+              }}
+            >
+              Get help
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function HelpDialog({
@@ -610,22 +698,11 @@ export function PurchaseHistory({ userId }: { userId: string }) {
                   </span>
                 </div>
                 <div className="listing-row-actions">
-                  <Link
-                    className="text-button"
-                    href={`/account/purchases/${row.id}/receipt`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Receipt
-                  </Link>
-                  <button
-                    type="button"
-                    className="text-button"
-                    aria-label={`Options for ${row.title}`}
-                    onClick={() => setOpenId(row.id)}
-                  >
-                    Options
-                  </button>
+                  <PurchaseRowMenu
+                    title={row.title}
+                    receiptHref={`/account/purchases/${row.id}/receipt`}
+                    onGetHelp={() => setOpenId(row.id)}
+                  />
                 </div>
               </article>
             );
