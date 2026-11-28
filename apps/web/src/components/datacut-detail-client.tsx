@@ -57,6 +57,7 @@ export function DatacutDetailClient({
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
+  const [sharePop, setSharePop] = useState(false);
   const [liveRating, setLiveRating] = useState(cut.rating);
   const [liveReviews, setLiveReviews] = useState(cut.reviews);
   const [tab, setTab] = useState<"overview" | "reviews">("overview");
@@ -242,14 +243,16 @@ export function DatacutDetailClient({
   }
 
   async function shareListing() {
+    setSharePop(true);
+    window.setTimeout(() => setSharePop(false), 350);
     const url = window.location.href;
     try {
       await navigator.clipboard.writeText(url);
-      setShareHint("Copied");
+      setShareHint("URL copied to clipboard");
     } catch {
-      setShareHint("Copy failed");
+      setShareHint("Couldn't copy URL");
     }
-    window.setTimeout(() => setShareHint(null), 1600);
+    window.setTimeout(() => setShareHint(null), 2200);
   }
 
   return (
@@ -276,10 +279,10 @@ export function DatacutDetailClient({
         <div className="detail-actions">
           <button
             type="button"
-            className="detail-action"
+            className={`detail-action${sharePop ? " share-pop" : ""}`}
             onClick={() => void shareListing()}
-            aria-label={shareHint ?? "Share"}
-            title={shareHint ?? "Share"}
+            aria-label="Share"
+            title="Share"
           >
             <Icon name="share" size={18} />
           </button>
@@ -302,6 +305,11 @@ export function DatacutDetailClient({
             />
           ) : null}
         </div>
+        {shareHint ? (
+          <div className="detail-share-toast" role="status" aria-live="polite">
+            {shareHint}
+          </div>
+        ) : null}
         <p>{cut.description}</p>
 
         <div className="filter-row dashboard-tabs" role="tablist" aria-label="Datacut sections">
