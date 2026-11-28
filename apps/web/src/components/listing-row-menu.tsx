@@ -2,26 +2,30 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import type { ListingStatus } from "@dataonly/core";
 import { Icon } from "@/components/icons";
 
 type ListingRowMenuProps = {
   editHref: string;
   statsHref: string;
   listingTitle: string;
-  deleting?: boolean;
-  onDelete: () => void;
+  status: ListingStatus;
+  busy?: boolean;
+  onTogglePublish: () => void;
 };
 
 export function ListingRowMenu({
   editHref,
   statsHref,
   listingTitle,
-  deleting = false,
-  onDelete,
+  status,
+  busy = false,
+  onTogglePublish,
 }: ListingRowMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const isPublished = status === "published";
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +60,7 @@ export function ListingRowMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={menuId}
-        disabled={deleting}
+        disabled={busy}
         onClick={() => setOpen((value) => !value)}
       >
         <Icon name="more" size={18} />
@@ -82,15 +86,25 @@ export function ListingRowMenu({
             <button
               type="button"
               role="menuitem"
-              className="listing-row-menu-item listing-row-menu-item--danger"
-              disabled={deleting}
+              className={
+                isPublished
+                  ? "listing-row-menu-item listing-row-menu-item--danger"
+                  : "listing-row-menu-item"
+              }
+              disabled={busy}
               onClick={() => {
                 setOpen(false);
-                onDelete();
+                onTogglePublish();
               }}
             >
-              <Icon name="trash" size={16} />
-              {deleting ? "Deleting…" : "Delete"}
+              <Icon name={isPublished ? "trash" : "spark"} size={16} />
+              {busy
+                ? isPublished
+                  ? "Unpublishing…"
+                  : "Publishing…"
+                : isPublished
+                  ? "Unpublish"
+                  : "Publish"}
             </button>
             <Link
               role="menuitem"

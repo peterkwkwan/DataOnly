@@ -10,7 +10,7 @@ import { useAuth } from "@/context/auth-context";
 import { useSaved } from "@/context/saved-context";
 import { catalog } from "@/lib/catalog";
 import { ensureCreatorForUser } from "@/lib/creator";
-import { datacutDeleteBlockedMessage, formatClientError } from "@/lib/errors";
+import { formatClientError } from "@/lib/errors";
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Creator, Datacut, ListingStatus } from "@dataonly/core";
 import { mapDatacut, mapEntitlement, type DatacutRow, type EntitlementRow } from "@dataonly/core";
@@ -120,36 +120,47 @@ function DashboardPageContent() {
   const [listings, setListings] = useState<Datacut[]>([]);
   const [purchased, setPurchased] = useState<PurchasedCut[]>([]);
   const [error, setError] = useState<string | null>(null);
-  // Delete/action failures must not reuse load `error` — that gate hides the listings table.
+  // Action failures must not reuse load `error` — that gate hides the listings table.
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [statusBusyId, setStatusBusyId] = useState<number | null>(null);
   const [downloadId, setDownloadId] = useState<number | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  async function handleDeleteListing(cut: Datacut) {
-    if (!window.confirm(`Delete “${cut.title}”? This cannot be undone.`)) return;
-    setDeletingId(cut.id);
+  async function handleTogglePublish(cut: Datacut) {
+    const current = cut.status ?? "draft";
+    const nextStatus = current === "published" ? "unpublished" : "published";
+    if (nextStatus === "unpublished") {
+      if (
+        !window.confirm(
+          `Unpublish “${cut.title}”? It leaves the catalog; buyers keep their access.`,
+        )
+      ) {
+        return;
+      }
+    }
+    setStatusBusyId(cut.id);
     setActionError(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      // entitlements/purchases are ON DELETE RESTRICT — refuse with UX when buyers exist.
-      const { error: deleteError } = await supabase.from("datacuts").delete().eq("id", cut.id);
-      if (deleteError) {
-        const blocked = datacutDeleteBlockedMessage(deleteError);
-        if (blocked) {
-          setActionError(blocked);
-          return;
-        }
-        throw deleteError;
-      }
-      setListings((prev) => prev.filter((item) => item.id !== cut.id));
+      // Same status path as admin force-unpublish — row stays; buyers retain entitlements.
+      const { error: updateError } = await supabase
+        .from("datacuts")
+        .update({ status: nextStatus, updated_at: new Date().toISOString() })
+        .eq("id", cut.id);
+      if (updateError) throw updateError;
+      setListings((prev) =>
+        prev.map((item) => (item.id === cut.id ? { ...item, status: nextStatus } : item)),
+      );
     } catch (err) {
       setActionError(
-        datacutDeleteBlockedMessage(err) ?? formatClientError(err, "Failed to delete listing"),
+        formatClientError(
+          err,
+          nextStatus === "unpublished" ? "Failed to unpublish listing" : "Failed to publish listing",
+        ),
       );
     } finally {
-      setDeletingId(null);
+      setStatusBusyId(null);
     }
   }
 
@@ -447,8 +458,9 @@ function DashboardPageContent() {
                         editHref={`/dashboard/listings/${cut.id}`}
                         statsHref={`/dashboard/listings/${cut.id}/stats`}
                         listingTitle={cut.title}
-                        deleting={deletingId === cut.id}
-                        onDelete={() => void handleDeleteListing(cut)}
+                        status={cut.status ?? "draft"}
+                        busy={statusBusyId === cut.id}
+                        onTogglePublish={() => void handleTogglePublish(cut)}
                       />
                     </div>
                   </article>
