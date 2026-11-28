@@ -19,7 +19,7 @@ type Props = {
   datacutId?: number | null;
   creatorId?: string | null;
   label?: string;
-  /** Shown under/beside the ⋯ trigger when variant is overflow */
+  /** aria-label/title for the ⋯ trigger when variant is overflow */
   triggerLabel?: string;
   /** text = link button; overflow = ⋯ menu with Report item */
   variant?: "text" | "overflow";
@@ -132,13 +132,13 @@ export function ReportButton({
             triggerLabel ? "detail-action listing-row-menu-trigger" : "listing-row-menu-trigger"
           }
           aria-label={triggerLabel ?? "More actions"}
+          title={triggerLabel ?? "More actions"}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           aria-controls={menuId}
           onClick={() => setMenuOpen((value) => !value)}
         >
           <Icon name="more" size={18} />
-          {triggerLabel ? <span>{triggerLabel}</span> : null}
         </button>
         {menuOpen ? (
           <div

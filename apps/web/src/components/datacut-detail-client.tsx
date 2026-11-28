@@ -274,18 +274,23 @@ export function DatacutDetailClient({
           <span className="detail-meta-updated">{cut.updated}</span>
         </div>
         <div className="detail-actions">
-          <button type="button" className="detail-action" onClick={() => void shareListing()}>
+          <button
+            type="button"
+            className="detail-action"
+            onClick={() => void shareListing()}
+            aria-label={shareHint ?? "Share"}
+            title={shareHint ?? "Share"}
+          >
             <Icon name="share" size={18} />
-            <span>{shareHint ?? "Share"}</span>
           </button>
           <button
             type="button"
             className={`detail-action ${saved ? "saved" : ""}`}
             onClick={() => toggleSaved(cut.id)}
             aria-label={saved ? "Remove from saved" : "Save"}
+            title={saved ? "Remove from saved" : "Save"}
           >
             <Icon name="bookmark" size={18} filled={saved} />
-            <span>{saved ? "Saved" : "Save"}</span>
           </button>
           {!isOwner ? (
             <ReportButton
