@@ -1,4 +1,7 @@
--- Creator follows + new_follower bell. Paste in the Supabase SQL editor after the latest beta migration.
+-- Creator follows + new_follower bell.
+-- Paste once in the Supabase SQL editor on a live DB that already has notifications (sale/purchase types).
+-- Idempotent: safe to re-run. Widens notifications_type_check (incl. new_follower) before the notify trigger.
+-- After this, optional: 20260326000000_notifications_expansion.sql then 20260327000000+ save/sale link migrations.
 -- shortcut: creators.followers stays text for the existing mapper; switch to integer only if a later feature needs numeric sort on the column.
 -- shortcut: exception inside the new_follower trigger → WARNING, RETURN NEW — a notify failure must not roll back the follow insert.
 
@@ -63,10 +66,44 @@ create trigger follows_follower_count
   after insert or delete on public.follows
   for each row execute function public.refresh_creator_follower_count();
 
-alter table public.notifications drop constraint if exists notifications_type_check;
+-- Widen before notify_new_follower. Drop every type-in check (inline name can drift),
+-- then re-add the full tip allow-list so a re-paste never narrows past expansion/save.
+do $$
+declare
+  cname text;
+begin
+  for cname in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'notifications'
+      and con.contype = 'c'
+      and pg_get_constraintdef(con.oid) ~* 'type\s+in\s*\('
+  loop
+    execute format('alter table public.notifications drop constraint %I', cname);
+  end loop;
+end $$;
+
 alter table public.notifications
   add constraint notifications_type_check
-  check (type in ('purchase', 'sale', 'refund', 'report', 'verification', 'new_follower'));
+  check (type in (
+    'purchase', 'sale', 'refund', 'report', 'verification',
+    'new_follower', 'new_listing', 'review', 'save'
+  ));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'notifications_type_check'
+      and pg_get_constraintdef(oid) like '%new_follower%'
+  ) then
+    raise exception 'notifications_type_check missing new_follower';
+  end if;
+end $$;
 
 create or replace function public.notify_new_follower()
 returns trigger
