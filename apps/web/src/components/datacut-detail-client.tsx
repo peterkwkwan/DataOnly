@@ -372,12 +372,6 @@ export function DatacutDetailClient({
               ) : null}
             </div>
 
-            {hasSample ? (
-              <p className="empty-hint" style={{ marginTop: 12 }}>
-                Sample only — not the full dataset.
-              </p>
-            ) : null}
-
             {accessRevoked && !entitled ? (
               <p className="empty-hint" style={{ marginTop: 12 }}>
                 Access to this datacut was revoked. Download is no longer available.

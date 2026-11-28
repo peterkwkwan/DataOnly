@@ -365,9 +365,6 @@ export default function DatacutDetailScreen() {
               Access to this datacut was revoked. Download is no longer available.
             </Text>
           ) : null}
-          {hasSample ? (
-            <Text style={styles.banner}>Sample only — not the full dataset.</Text>
-          ) : null}
           {sampleError ? <Text style={styles.errorText}>{sampleError}</Text> : null}
           {accessError ? <Text style={styles.errorText}>{accessError}</Text> : null}
           {access ? (
