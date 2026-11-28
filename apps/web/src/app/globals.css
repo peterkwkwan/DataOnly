@@ -177,7 +177,7 @@ footer a {
 .detail-panel {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .detail-panel h1 {
@@ -186,6 +186,14 @@ footer a {
   letter-spacing: -2px;
   line-height: 1.05;
   margin: 0;
+}
+
+.detail-panel > p {
+  margin: 0;
+}
+
+.detail-panel .dashboard-tabs {
+  margin-top: 0;
 }
 
 .detail-meta {
