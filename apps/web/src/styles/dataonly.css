@@ -3922,14 +3922,6 @@ footer button {
   background: rgba(16, 27, 24, 0.05);
   outline: none;
 }
-.detail-action.saved {
-  background: var(--ink);
-  color: var(--lime);
-}
-.detail-action.saved:hover,
-.detail-action.saved:focus-visible {
-  background: var(--ink);
-}
 .detail-action.share-pop {
   animation: detail-share-pop 0.35s ease;
 }
