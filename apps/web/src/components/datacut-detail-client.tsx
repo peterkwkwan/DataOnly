@@ -58,6 +58,7 @@ export function DatacutDetailClient({
   const [banner, setBanner] = useState<string | null>(null);
   const [liveRating, setLiveRating] = useState(cut.rating);
   const [liveReviews, setLiveReviews] = useState(cut.reviews);
+  const [tab, setTab] = useState<"overview" | "reviews">("overview");
   const saved = isSaved(cut.id);
   const verified = creatorVerified || !!cut.creatorVerified;
   const isOwner = !!user && !!creatorUserId && user.id === creatorUserId;
@@ -271,119 +272,145 @@ export function DatacutDetailClient({
           </span>
         </div>
         <p>{cut.description}</p>
-        <div className="detail-meta">
-          <span>{cut.records} records</span>
-          <span>{cut.size}</span>
-          <span>{cut.format}</span>
-        </div>
-        <div className="buy-license">{cut.licenseBlurb}</div>
-        <div className="detail-price">${cut.price} USD</div>
 
-        {banner ? <p className="empty-hint">{banner}</p> : null}
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {isOwner ? (
-            <Link className="primary-button" href={`/dashboard/listings/${cut.id}`}>
-              Edit listing <Icon name="arrow" size={16} />
-            </Link>
-          ) : entitled ? (
-            <button
-              type="button"
-              className="primary-button"
-              disabled={accessBusy}
-              onClick={() => void downloadFile()}
-            >
-              {accessBusy ? "Preparing…" : "Download"} <Icon name="arrow" size={16} />
-            </button>
-          ) : accessRevoked ? (
-            <button type="button" className="primary-button" disabled>
-              Access revoked
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="primary-button"
-              disabled={entitlementLoading}
-              onClick={() => setBuyOpen(true)}
-            >
-              Buy datacut <Icon name="arrow" size={16} />
-            </button>
-          )}
-          {hasSample ? (
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={sampleBusy}
-              onClick={() => void downloadSample()}
-            >
-              {sampleBusy ? "Preparing…" : "Download sample"}
-            </button>
-          ) : null}
+        <div className="filter-row dashboard-tabs" role="tablist" aria-label="Datacut sections">
           <button
             type="button"
-            className={`icon-button ${saved ? "saved" : ""}`}
-            onClick={() => toggleSaved(cut.id)}
-            aria-label="Save"
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-              width: "auto",
-              padding: "0 14px",
-              gap: 8,
-              display: "inline-flex",
-            }}
+            role="tab"
+            aria-selected={tab === "overview"}
+            className={tab === "overview" ? "active" : undefined}
+            onClick={() => setTab("overview")}
           >
-            <Icon name="bookmark" size={18} filled={saved} />
-            {saved ? "Saved" : "Save"}
+            Overview
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "reviews"}
+            className={tab === "reviews" ? "active" : undefined}
+            onClick={() => setTab("reviews")}
+          >
+            Reviews
           </button>
         </div>
 
-        {hasSample ? (
-          <p className="empty-hint" style={{ marginTop: 12 }}>
-            Sample only — not the full dataset.
-          </p>
-        ) : null}
+        {tab === "overview" ? (
+          <>
+            <div className="detail-meta">
+              <span>{cut.records} records</span>
+              <span>{cut.size}</span>
+              <span>{cut.format}</span>
+            </div>
+            <div className="buy-license">{cut.licenseBlurb}</div>
+            <div className="detail-price">${cut.price} USD</div>
 
-        {accessRevoked && !entitled ? (
-          <p className="empty-hint" style={{ marginTop: 12 }}>
-            Access to this datacut was revoked. Download is no longer available.
-          </p>
-        ) : null}
+            {banner ? <p className="empty-hint">{banner}</p> : null}
 
-        {sampleError ? <p className="form-error">{sampleError}</p> : null}
-        {accessError ? <p className="form-error">{accessError}</p> : null}
-        {access ? (
-          <div className="buy-license" style={{ marginTop: 16 }}>
-            <b>
-              {access.delivery.mode === "signed_url" ? "Download started" : "Access granted"} ·{" "}
-              {access.license.summary.title}
-            </b>
-            {access.delivery.fileName ? (
-              <p style={{ margin: "8px 0 0" }}>File: {access.delivery.fileName}</p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {isOwner ? (
+                <Link className="primary-button" href={`/dashboard/listings/${cut.id}`}>
+                  Edit listing <Icon name="arrow" size={16} />
+                </Link>
+              ) : entitled ? (
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={accessBusy}
+                  onClick={() => void downloadFile()}
+                >
+                  {accessBusy ? "Preparing…" : "Download"} <Icon name="arrow" size={16} />
+                </button>
+              ) : accessRevoked ? (
+                <button type="button" className="primary-button" disabled>
+                  Access revoked
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={entitlementLoading}
+                  onClick={() => setBuyOpen(true)}
+                >
+                  Buy datacut <Icon name="arrow" size={16} />
+                </button>
+              )}
+              {hasSample ? (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={sampleBusy}
+                  onClick={() => void downloadSample()}
+                >
+                  {sampleBusy ? "Preparing…" : "Download sample"}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className={`icon-button ${saved ? "saved" : ""}`}
+                onClick={() => toggleSaved(cut.id)}
+                aria-label="Save"
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  width: "auto",
+                  padding: "0 14px",
+                  gap: 8,
+                  display: "inline-flex",
+                }}
+              >
+                <Icon name="bookmark" size={18} filled={saved} />
+                {saved ? "Saved" : "Save"}
+              </button>
+            </div>
+
+            {hasSample ? (
+              <p className="empty-hint" style={{ marginTop: 12 }}>
+                Sample only — not the full dataset.
+              </p>
             ) : null}
-            {access.delivery.note ? (
-              <p style={{ margin: "8px 0 0" }}>{access.delivery.note}</p>
-            ) : null}
-            <p style={{ margin: "6px 0 0" }}>
-              Format {access.delivery.format} · {access.delivery.size} · {access.delivery.records}{" "}
-              records · license {access.license.version}
-              {access.delivery.expiresIn
-                ? ` · link expires in ${access.delivery.expiresIn}s`
-                : ""}
-            </p>
-          </div>
-        ) : null}
 
-        <DatacutReviews
-          datacutId={cut.id}
-          entitled={entitled}
-          headerRating={cut.rating}
-          headerReviews={cut.reviews}
-          onSummaryChange={(summary) => {
-            setLiveRating(summary.rating);
-            setLiveReviews(summary.count);
-          }}
-        />
+            {accessRevoked && !entitled ? (
+              <p className="empty-hint" style={{ marginTop: 12 }}>
+                Access to this datacut was revoked. Download is no longer available.
+              </p>
+            ) : null}
+
+            {sampleError ? <p className="form-error">{sampleError}</p> : null}
+            {accessError ? <p className="form-error">{accessError}</p> : null}
+            {access ? (
+              <div className="buy-license" style={{ marginTop: 16 }}>
+                <b>
+                  {access.delivery.mode === "signed_url" ? "Download started" : "Access granted"} ·{" "}
+                  {access.license.summary.title}
+                </b>
+                {access.delivery.fileName ? (
+                  <p style={{ margin: "8px 0 0" }}>File: {access.delivery.fileName}</p>
+                ) : null}
+                {access.delivery.note ? (
+                  <p style={{ margin: "8px 0 0" }}>{access.delivery.note}</p>
+                ) : null}
+                <p style={{ margin: "6px 0 0" }}>
+                  Format {access.delivery.format} · {access.delivery.size} ·{" "}
+                  {access.delivery.records} records · license {access.license.version}
+                  {access.delivery.expiresIn
+                    ? ` · link expires in ${access.delivery.expiresIn}s`
+                    : ""}
+                </p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <DatacutReviews
+            datacutId={cut.id}
+            entitled={entitled}
+            headerRating={cut.rating}
+            headerReviews={cut.reviews}
+            onSummaryChange={(summary) => {
+              setLiveRating(summary.rating);
+              setLiveReviews(summary.count);
+            }}
+          />
+        )}
       </div>
       <BuyModal
         cut={cut}
