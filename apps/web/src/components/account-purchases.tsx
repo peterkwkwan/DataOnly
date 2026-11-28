@@ -124,13 +124,7 @@ function refundRequestNoteKey(purchaseId: string): string {
   return `dataonly.refundRequestNote.${purchaseId}`;
 }
 
-const HELP_OTHER_WORD_LIMIT = 500;
-
-function countWords(text: string): number {
-  const trimmed = text.trim();
-  if (!trimmed) return 0;
-  return trimmed.split(/\s+/).length;
-}
+const HELP_OTHER_CHAR_LIMIT = 500;
 
 function readDeviceCard(userId: string): DeviceCard | null {
   try {
@@ -313,8 +307,7 @@ function HelpDialog({
   );
   const requestedWhen = formatWhen(sentAt || row.refundRequestedAt || "");
   const copy = refundBuyerCopy(input, requestedWhen === "—" ? "" : requestedWhen);
-  const otherWordCount = countWords(note);
-  const otherWordsRemaining = HELP_OTHER_WORD_LIMIT - otherWordCount;
+  const otherCharsRemaining = HELP_OTHER_CHAR_LIMIT - note.length;
 
   async function submitRefund() {
     if (note.trim().length > 500) {
@@ -358,8 +351,8 @@ function HelpDialog({
       setNoteError("Add a note so we know what you need.");
       return;
     }
-    if (countWords(trimmed) > HELP_OTHER_WORD_LIMIT) {
-      setNoteError(`Keep the note under ${HELP_OTHER_WORD_LIMIT} words.`);
+    if (trimmed.length > HELP_OTHER_CHAR_LIMIT) {
+      setNoteError(`Keep the note under ${HELP_OTHER_CHAR_LIMIT} characters.`);
       return;
     }
     setNoteError(null);
@@ -415,6 +408,7 @@ function HelpDialog({
                   Additional context
                   <textarea
                     rows={5}
+                    maxLength={HELP_OTHER_CHAR_LIMIT}
                     value={note}
                     onChange={(event) => {
                       setNote(event.target.value);
@@ -423,10 +417,11 @@ function HelpDialog({
                   />
                 </label>
                 <p
-                  className={otherWordsRemaining < 0 ? "form-error" : "form-footnote"}
+                  className={otherCharsRemaining < 0 ? "form-error" : "form-footnote"}
                   aria-live="polite"
                 >
-                  {otherWordsRemaining} {otherWordsRemaining === 1 ? "word" : "words"} remaining
+                  {otherCharsRemaining}{" "}
+                  {otherCharsRemaining === 1 ? "character" : "characters"} remaining
                 </p>
                 {noteError ? <p className="form-error">{noteError}</p> : null}
                 {error ? <p className="form-error">{error}</p> : null}
