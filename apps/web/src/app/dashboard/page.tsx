@@ -120,6 +120,8 @@ function DashboardPageContent() {
   const [listings, setListings] = useState<Datacut[]>([]);
   const [purchased, setPurchased] = useState<PurchasedCut[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Delete/action failures must not reuse load `error` — that gate hides the listings table.
+  const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [downloadId, setDownloadId] = useState<number | null>(null);
@@ -128,7 +130,7 @@ function DashboardPageContent() {
   async function handleDeleteListing(cut: Datacut) {
     if (!window.confirm(`Delete “${cut.title}”? This cannot be undone.`)) return;
     setDeletingId(cut.id);
-    setError(null);
+    setActionError(null);
     try {
       const supabase = createBrowserSupabaseClient();
       // entitlements/purchases are ON DELETE RESTRICT — refuse with UX when buyers exist.
@@ -136,14 +138,16 @@ function DashboardPageContent() {
       if (deleteError) {
         const blocked = datacutDeleteBlockedMessage(deleteError);
         if (blocked) {
-          setError(blocked);
+          setActionError(blocked);
           return;
         }
         throw deleteError;
       }
       setListings((prev) => prev.filter((item) => item.id !== cut.id));
     } catch (err) {
-      setError(formatClientError(err, "Failed to delete listing"));
+      setActionError(
+        datacutDeleteBlockedMessage(err) ?? formatClientError(err, "Failed to delete listing"),
+      );
     } finally {
       setDeletingId(null);
     }
@@ -191,6 +195,7 @@ function DashboardPageContent() {
     async function load() {
       setBusy(true);
       setError(null);
+      setActionError(null);
       try {
         const supabase = createBrowserSupabaseClient();
         const ensured = await ensureCreatorForUser(supabase, user!, profile?.displayName);
@@ -350,7 +355,9 @@ function DashboardPageContent() {
         <p>Draft and publish datacuts, open purchases you own, and manage your storefront.</p>
       </div>
 
-      {error ? <p className="form-error dashboard-inline-error">{error}</p> : null}
+      {error || actionError ? (
+        <p className="form-error dashboard-inline-error">{actionError ?? error}</p>
+      ) : null}
 
       <div className="filter-row dashboard-tabs" role="tablist" aria-label="Dashboard sections">
         <button

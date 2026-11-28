@@ -14,10 +14,9 @@ export function isDbPermissionError(
  */
 export function datacutDeleteBlockedMessage(err: unknown): string | null {
   if (!err || typeof err !== "object") return null;
+  const rawCode = "code" in err ? (err as { code: unknown }).code : undefined;
   const code =
-    "code" in err && typeof (err as { code: unknown }).code === "string"
-      ? (err as { code: string }).code
-      : "";
+    typeof rawCode === "string" ? rawCode : typeof rawCode === "number" ? String(rawCode) : "";
   const message =
     "message" in err && typeof (err as { message: unknown }).message === "string"
       ? (err as { message: string }).message
@@ -49,9 +48,14 @@ function assertDatacutDeleteBlockedMessage() {
     message: "update or delete on table \"datacuts\" violates foreign key constraint",
     details: "Key is still referenced from table \"entitlements\".",
   });
+  const numeric = datacutDeleteBlockedMessage({
+    code: 23503,
+    message: 'update or delete on table "datacuts" violates foreign key constraint "entitlements_datacut_id_fkey"',
+  });
   const other = datacutDeleteBlockedMessage({ code: "42501", message: "permission denied" });
   if (
     buyers !== "This listing has buyers — unpublish it instead of deleting." ||
+    numeric !== "This listing has buyers — unpublish it instead of deleting." ||
     other !== null
   ) {
     throw new Error("datacutDeleteBlockedMessage");
@@ -94,7 +98,16 @@ export function formatClientError(err: unknown, fallback: string): string {
 function looksLikeMissingSchema(message: string, code?: string) {
   const lower = message.toLowerCase();
   if (code === "42P01" || code === "PGRST205" || code === "PGRST204") return true;
-  if (code === "23503") return true; // FK — often missing seed datacuts or profile row
+  // Buyer FK on datacut delete is expected — not a missing-schema hint.
+  if (
+    lower.includes("entitlements_datacut_id_fkey") ||
+    lower.includes("purchases_datacut_id_fkey") ||
+    (lower.includes("referenced from table") &&
+      (lower.includes("entitlements") || lower.includes("purchases")))
+  ) {
+    return false;
+  }
+  if (code === "23503") return true; // other FK — often missing seed datacuts or profile row
   if (code === "42501") return true; // missing GRANTs
   return (
     lower.includes("schema cache") ||
