@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Verified } from "@/components/brand";
 import { DatacutCard } from "@/components/datacut-card";
+import { FollowButton } from "@/components/follow-button";
 import { Icon } from "@/components/icons";
 import { ReportButton } from "@/components/report-button";
 import { catalog as mockCatalog, getCatalog } from "@/lib/catalog";
@@ -50,7 +51,7 @@ export default async function CreatorStorefrontPage({ params }: Props) {
           <span>
             listed datacuts
             <br />
-            {creator.followers} followers
+            <span data-followers>{creator.followers}</span> followers
           </span>
         </div>
       </div>
@@ -64,9 +65,13 @@ export default async function CreatorStorefrontPage({ params }: Props) {
             {creator.initials}
           </div>
           <div className="store-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <button type="button" className="follow-button">
-              Follow
-            </button>
+            <FollowButton
+              creatorId={creator.id}
+              creatorSlug={creator.slug}
+              creatorUserId={creator.userId}
+              creatorName={creator.name}
+              initialFollowers={creator.followers}
+            />
             <ReportButton targetType="creator" creatorId={creator.id} />
           </div>
           <h2 className="creator-title">
@@ -80,7 +85,7 @@ export default async function CreatorStorefrontPage({ params }: Props) {
               <b>{creator.cuts}</b> Datacuts
             </span>
             <span>
-              <b>{creator.followers}</b> Followers
+              <b data-followers>{creator.followers}</b> Followers
             </span>
             <span>
               <b>{storefrontRating ?? "—"}</b> Rating

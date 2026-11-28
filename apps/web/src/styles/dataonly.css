@@ -1388,6 +1388,19 @@
   font-size: 11px;
   font-weight: 700;
 }
+.follow-button.following {
+  border-color: #507561;
+  background: #507561;
+  color: white;
+}
+.follow-error {
+  position: absolute;
+  top: 52px;
+  right: 20px;
+  margin: 0;
+  max-width: 220px;
+  text-align: right;
+}
 .store-body h2 {
   font: 650 19px "Manrope";
   display: inline-flex;
