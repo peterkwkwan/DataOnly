@@ -76,6 +76,25 @@ function listingStatusPillClass(status: string): string {
   return "status-pill status-pill--submitted";
 }
 
+/** Published → public storefront; draft/unpublished → edit (public slug 404s). */
+function listingTitleHref(cut: { id: number; slug: string; status?: string | null }): string {
+  return cut.status === "published"
+    ? `/datacuts/${cut.slug}`
+    : `/dashboard/listings/${cut.id}`;
+}
+
+function assertListingTitleHref() {
+  if (
+    listingTitleHref({ id: 1, slug: "alpha", status: "published" }) !== "/datacuts/alpha" ||
+    listingTitleHref({ id: 2, slug: "beta", status: "draft" }) !== "/dashboard/listings/2" ||
+    listingTitleHref({ id: 3, slug: "gamma", status: "unpublished" }) !==
+      "/dashboard/listings/3"
+  ) {
+    throw new Error("listingTitleHref");
+  }
+}
+assertListingTitleHref();
+
 function mapPurchasedRow(row: EntitlementRow & { datacuts?: unknown }): PurchasedCut | null {
   const entitlement = mapEntitlement(row);
   if (entitlement.status !== "active") return null;
@@ -439,7 +458,9 @@ function DashboardPageContent() {
                 return (
                   <article key={cut.id} className="listing-row">
                     <div>
-                      <b>{cut.title}</b>
+                      <b>
+                        <Link href={listingTitleHref(cut)}>{cut.title}</Link>
+                      </b>
                       <span className="listing-row-meta">
                         <span className={listingStatusPillClass(listingPill.status)}>
                           {listingPill.label}
