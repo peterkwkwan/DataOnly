@@ -127,6 +127,10 @@ export interface Datacut {
   storagePath?: string | null;
   /** Original filename for entitled downloads. */
   fileName?: string | null;
+  /** Optional sample object path; public via /api/samples/access when published. */
+  sampleStoragePath?: string | null;
+  /** Original filename for the sample download. */
+  sampleFileName?: string | null;
 }
 
 export interface AutocompleteSuggestion {

@@ -82,6 +82,8 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [attachedName, setAttachedName] = useState(initial?.fileName ?? null);
+  const [sampleFile, setSampleFile] = useState<File | null>(null);
+  const [attachedSampleName, setAttachedSampleName] = useState(initial?.sampleFileName ?? null);
   const [formatOpen, setFormatOpen] = useState(false);
   const [activeOption, setActiveOption] = useState(() =>
     Math.max(0, FORMAT_OPTIONS.indexOf(normalizeFormat(initial?.format))),
@@ -220,6 +222,28 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
           .eq("id", datacutId);
         if (pathError) throw pathError;
         setAttachedName(fileName);
+      }
+
+      if (sampleFile && datacutId) {
+        const objectPath = buildDatacutObjectPath(creatorId, datacutId, sampleFile.name, {
+          sample: true,
+        });
+        const { error: uploadError } = await supabase.storage
+          .from(DATACUT_STORAGE_BUCKET)
+          .upload(objectPath, sampleFile, { upsert: true, contentType: sampleFile.type || undefined });
+        if (uploadError) throw uploadError;
+
+        const sampleFileName = sanitizeFileName(sampleFile.name);
+        const { error: pathError } = await supabase
+          .from("datacuts")
+          .update({
+            sample_storage_path: objectPath,
+            sample_file_name: sampleFileName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", datacutId);
+        if (pathError) throw pathError;
+        setAttachedSampleName(sampleFileName);
       }
 
       router.push("/dashboard");
@@ -361,6 +385,20 @@ export function ListingForm({ creatorId, categories, initial }: Props) {
           : attachedName
             ? `Attached: ${attachedName}`
             : "Optional — buyers can download only after purchase once a file is attached. Stored in the private datacuts bucket."}
+      </p>
+      <label>
+        Sample file
+        <input
+          type="file"
+          onChange={(e) => setSampleFile(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      <p className="form-footnote">
+        {sampleFile
+          ? `Will upload sample: ${sampleFile.name}`
+          : attachedSampleName
+            ? `Sample attached: ${attachedSampleName}`
+            : "Optional preview — guests can download without purchase. Keep it small (tens–hundreds of rows); omit secrets/PII you would not publish for free. Platform does not verify content vs the full file."}
       </p>
       {error ? <p className="form-error">{error}</p> : null}
       <div className="form-actions">

@@ -146,3 +146,26 @@ export async function confirmCheckout(sessionId: string): Promise<{ ok: boolean 
 export async function requestAccess(datacutId: number): Promise<AccessPayload> {
   return apiFetch<AccessPayload>(`/api/entitlements/access?datacutId=${datacutId}`);
 }
+
+export type SampleAccessPayload = {
+  access: string;
+  kind?: string;
+  delivery: {
+    mode: string;
+    note?: string;
+    url?: string;
+    expiresIn?: number;
+    fileName?: string;
+    format: string;
+    size: string;
+    records: string;
+  };
+  error?: string;
+};
+
+/** Public sample download — no auth. */
+export async function requestSampleAccess(datacutId: number): Promise<SampleAccessPayload> {
+  return apiFetch<SampleAccessPayload>(`/api/samples/access?datacutId=${datacutId}`, {
+    auth: false,
+  });
+}

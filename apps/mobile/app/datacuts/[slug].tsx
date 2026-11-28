@@ -24,6 +24,7 @@ import {
   createCheckoutSession,
   isApiConfigured,
   requestAccess,
+  requestSampleAccess,
   type AccessPayload,
 } from "@/lib/api";
 import { catalog } from "@/lib/catalog";
@@ -54,6 +55,8 @@ export default function DatacutDetailScreen() {
   const [accessBusy, setAccessBusy] = useState(false);
   const [access, setAccess] = useState<AccessPayload | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [sampleBusy, setSampleBusy] = useState(false);
+  const [sampleError, setSampleError] = useState<string | null>(null);
 
   const refreshEntitlement = useCallback(async () => {
     if (!cut || !authConfigured || !user || !isApiConfigured()) {
@@ -254,6 +257,25 @@ export default function DatacutDetailScreen() {
     }
   }
 
+  async function downloadSample() {
+    setSampleError(null);
+    setSampleBusy(true);
+    try {
+      const data = await requestSampleAccess(datacut.id);
+      if (data.delivery.mode === "signed_url" && data.delivery.url) {
+        await Linking.openURL(data.delivery.url);
+      } else {
+        setSampleError(data.delivery.note ?? "No sample file");
+      }
+    } catch (err) {
+      setSampleError(err instanceof Error ? err.message : "Sample download failed");
+    } finally {
+      setSampleBusy(false);
+    }
+  }
+
+  const hasSample = !!datacut.sampleStoragePath?.trim();
+
   function primaryCta() {
     if (entitled) {
       return (
@@ -343,6 +365,10 @@ export default function DatacutDetailScreen() {
               Access to this datacut was revoked. Download is no longer available.
             </Text>
           ) : null}
+          {hasSample ? (
+            <Text style={styles.banner}>Sample only — not the full dataset.</Text>
+          ) : null}
+          {sampleError ? <Text style={styles.errorText}>{sampleError}</Text> : null}
           {accessError ? <Text style={styles.errorText}>{accessError}</Text> : null}
           {access ? (
             <View style={styles.accessCard}>
@@ -373,7 +399,22 @@ export default function DatacutDetailScreen() {
           <Text style={styles.footerLabel}>{entitled ? "Owned" : "Checkout"}</Text>
           <Text style={styles.footerPrice}>${datacut.price}</Text>
         </View>
-        {primaryCta()}
+        <View style={styles.footerActions}>
+          {primaryCta()}
+          {hasSample ? (
+            <Pressable
+              style={[styles.sampleBtn, sampleBusy && styles.buyDisabled]}
+              disabled={sampleBusy}
+              onPress={() => void downloadSample()}
+            >
+              {sampleBusy ? (
+                <ActivityIndicator color={colors.ink} />
+              ) : (
+                <Text style={styles.sampleBtnText}>Download sample</Text>
+              )}
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       <Modal visible={buyOpen} transparent animationType="fade" onRequestClose={() => setBuyOpen(false)}>
@@ -605,6 +646,25 @@ const styles = StyleSheet.create({
     color: colors.signal,
     fontWeight: "800",
     fontSize: 13,
+  },
+  footerActions: {
+    alignItems: "stretch",
+    gap: 8,
+  },
+  sampleBtn: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  sampleBtnText: {
+    color: colors.ink,
+    fontWeight: "700",
+    fontSize: 12,
   },
   modalBackdrop: {
     flex: 1,

@@ -52,10 +52,13 @@ export function DatacutDetailClient({
   const [access, setAccess] = useState<AccessPayload | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [accessBusy, setAccessBusy] = useState(false);
+  const [sampleBusy, setSampleBusy] = useState(false);
+  const [sampleError, setSampleError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const saved = isSaved(cut.id);
   const verified = creatorVerified || !!cut.creatorVerified;
   const isOwner = !!user && !!creatorUserId && user.id === creatorUserId;
+  const hasSample = !!cut.sampleStoragePath?.trim();
 
   const refreshEntitlement = useCallback(async () => {
     if (!configured || !user) {
@@ -202,6 +205,37 @@ export function DatacutDetailClient({
     }
   }
 
+  async function downloadSample() {
+    setSampleError(null);
+    setSampleBusy(true);
+    try {
+      const res = await fetch(`/api/samples/access?datacutId=${cut.id}`);
+      const data = (await res.json()) as {
+        delivery?: { mode?: string; url?: string; fileName?: string; note?: string };
+        error?: string;
+      };
+      if (!res.ok) {
+        setSampleError(data.error ?? "Sample download failed");
+        return;
+      }
+      if (data.delivery?.mode === "signed_url" && data.delivery.url) {
+        const anchor = document.createElement("a");
+        anchor.href = data.delivery.url;
+        anchor.rel = "noopener";
+        anchor.download = data.delivery.fileName || "sample";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } else {
+        setSampleError(data.delivery?.note ?? "No sample file");
+      }
+    } catch (err) {
+      setSampleError(err instanceof Error ? err.message : "Sample download failed");
+    } finally {
+      setSampleBusy(false);
+    }
+  }
+
   return (
     <div className="detail-layout">
       <div className="detail-art" style={{ background: cut.accent }}>
@@ -272,6 +306,16 @@ export function DatacutDetailClient({
               Buy datacut <Icon name="arrow" size={16} />
             </button>
           )}
+          {hasSample ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={sampleBusy}
+              onClick={() => void downloadSample()}
+            >
+              {sampleBusy ? "Preparing…" : "Download sample"}
+            </button>
+          ) : null}
           <button
             type="button"
             className={`icon-button ${saved ? "saved" : ""}`}
@@ -291,12 +335,19 @@ export function DatacutDetailClient({
           </button>
         </div>
 
+        {hasSample ? (
+          <p className="empty-hint" style={{ marginTop: 12 }}>
+            Sample only — not the full dataset.
+          </p>
+        ) : null}
+
         {accessRevoked && !entitled ? (
           <p className="empty-hint" style={{ marginTop: 12 }}>
             Access to this datacut was revoked. Download is no longer available.
           </p>
         ) : null}
 
+        {sampleError ? <p className="form-error">{sampleError}</p> : null}
         {accessError ? <p className="form-error">{accessError}</p> : null}
         {access ? (
           <div className="buy-license" style={{ marginTop: 16 }}>

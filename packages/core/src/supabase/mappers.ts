@@ -132,6 +132,8 @@ export type DatacutRow = {
   status: string;
   storage_path?: string | null;
   file_name?: string | null;
+  sample_storage_path?: string | null;
+  sample_file_name?: string | null;
   creators?:
     | { name: string; verified?: boolean | null }
     | { name: string; verified?: boolean | null }[]
@@ -316,6 +318,8 @@ export function mapDatacut(row: DatacutRow): Datacut {
     status: mapListingStatus(row.status),
     storagePath: row.storage_path ?? null,
     fileName: row.file_name ?? null,
+    sampleStoragePath: row.sample_storage_path ?? null,
+    sampleFileName: row.sample_file_name ?? null,
   };
 }
 

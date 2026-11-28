@@ -193,7 +193,7 @@ function DashboardPageContent() {
             supabase
               .from("datacuts")
               .select(
-                "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, storage_path, file_name, creators(name, verified), categories(name)",
+                "id, slug, title, creator_id, category_id, price, rating, reviews, size, records, accent, art, updated_label, format, license, description, status, storage_path, file_name, sample_storage_path, sample_file_name, creators(name, verified), categories(name)",
               )
               .eq("creator_id", ensured.id)
               .order("updated_at", { ascending: false }),
