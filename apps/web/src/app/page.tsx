@@ -124,7 +124,7 @@ export default async function HomePage() {
               className="mini-creator"
               key={creator.id}
               href={`/creators/${creator.slug}`}
-              style={{ transform: `translateX(${index * 22}px)` }}
+              style={{ ["--stack-x" as string]: `${index * 22}px` }}
             >
               <div className="avatar" style={{ background: creator.color }}>
                 {creator.initials}

@@ -1131,6 +1131,11 @@
   gap: 13px;
   max-width: 510px;
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.16);
+  transform: translateX(var(--stack-x, 0px));
+  transition: transform 0.2s;
+}
+.mini-creator:hover {
+  transform: translateX(var(--stack-x, 0px)) translateY(-4px);
 }
 .avatar,
 .large-avatar {
