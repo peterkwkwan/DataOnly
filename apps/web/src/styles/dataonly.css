@@ -869,6 +869,22 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
+.related-section {
+  padding-top: 48px;
+  padding-bottom: 72px;
+  border-top: 1px solid var(--line);
+}
+.related-rail {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+}
+.related-rail .datacut-card {
+  flex: 0 0 min(280px, 82vw);
+  scroll-snap-align: start;
+}
 .datacut-card {
   background: white;
   border: 1px solid #dce0d9;

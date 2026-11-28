@@ -37,11 +37,13 @@ export function DatacutDetailClient({
   creatorSlug,
   creatorVerified,
   creatorUserId,
+  categorySlug,
 }: {
   cut: Datacut;
   creatorSlug?: string;
   creatorVerified: boolean;
   creatorUserId?: string | null;
+  categorySlug?: string;
 }) {
   const { isSaved, toggleSaved } = useSaved();
   const { user, configured, loading: authLoading } = useAuth();
@@ -285,7 +287,13 @@ export function DatacutDetailClient({
         <Art type={cut.art} />
       </div>
       <div className="detail-panel">
-        <span className="kicker">{cut.categoryName}</span>
+        <Link
+          href={categorySlug ? `/explore/${categorySlug}` : "/explore"}
+          className="empty-hint"
+          style={{ marginTop: 0 }}
+        >
+          ← Back to {cut.categoryName}
+        </Link>
         <h1>{cut.title}</h1>
         <div className="detail-meta">
           <Link

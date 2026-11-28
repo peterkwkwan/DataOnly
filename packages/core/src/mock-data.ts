@@ -217,6 +217,29 @@ export const datacuts: Datacut[] = [
     description:
       "Daily sentiment features derived from filings, headlines, and social chatter for equities research.",
   },
+  {
+    id: 5,
+    slug: "origin-cacao-bean-scores",
+    title: "Origin Cacao Bean Scores",
+    creatorId: "sensory",
+    creatorName: "The Sensory Lab",
+    creatorVerified: true,
+    categoryId: "food-culinary",
+    categoryName: "Food & Culinary",
+    price: 72,
+    rating: 4.6,
+    reviews: 41,
+    size: "900 MB",
+    records: "22K",
+    accent: "#ffc4b0",
+    art: "coffee",
+    updated: "Updated 5 days ago",
+    format: "CSV",
+    license: "commercial",
+    licenseBlurb: commercialBlurb,
+    description:
+      "Fermentation and roast sensory scores for specialty cacao lots across Latin America and West Africa.",
+  },
 ];
 
 /** Seeded saved IDs for first paint (matches Make prototype). */
