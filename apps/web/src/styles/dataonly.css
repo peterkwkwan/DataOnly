@@ -3938,6 +3938,9 @@ footer button {
   min-width: 220px;
   margin-bottom: 16px;
 }
+.results-header .menu-select--inline {
+  margin-bottom: 0;
+}
 .menu-select--inline .industry-field-label {
   white-space: nowrap;
 }

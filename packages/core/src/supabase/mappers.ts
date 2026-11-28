@@ -126,6 +126,7 @@ export type DatacutRow = {
   accent: string;
   art: string;
   updated_label: string;
+  updated_at?: string | null;
   format: string;
   license: string;
   description: string;
@@ -311,6 +312,7 @@ export function mapDatacut(row: DatacutRow): Datacut {
     accent: row.accent,
     art: row.art,
     updated: row.updated_label,
+    updatedAt: row.updated_at ?? "",
     format: row.format,
     license,
     licenseBlurb: licenseBlurb(license),

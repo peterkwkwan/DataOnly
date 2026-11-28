@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DatacutCard } from "@/components/datacut-card";
-import { Icon } from "@/components/icons";
+import { ExploreResults } from "@/components/explore-results";
 import { getCatalog } from "@/lib/catalog";
 
 export const metadata: Metadata = {
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 export default async function ExplorePage() {
   const catalog = await getCatalog();
   const categories = await catalog.getCategories();
-  const cuts = await catalog.getTopDatacuts(8);
+  const cuts = await catalog.getDatacuts();
 
   return (
     <section className="page-view">
@@ -33,40 +32,7 @@ export default async function ExplorePage() {
           </Link>
         ))}
       </div>
-      <div className="results-header">
-        <div>
-          <h2>Top datacuts</h2>
-          <span>{cuts.length} results</span>
-        </div>
-        <button type="button" className="sort-button">
-          Most popular <Icon name="chevron" size={16} />
-        </button>
-      </div>
-      <div className="category-layout">
-        <aside>
-          <b>Refine results</b>
-          <label>Data format</label>
-          {["CSV", "JSON", "Parquet", "Images"].map((filter) => (
-            <button key={filter} type="button">
-              <span className="checkbox" />
-              {filter}
-              <small>{20 + filter.length * 7}</small>
-            </button>
-          ))}
-          <label>License</label>
-          {["Commercial use", "Research", "Attribution"].map((filter) => (
-            <button key={filter} type="button">
-              <span className="checkbox" />
-              {filter}
-            </button>
-          ))}
-        </aside>
-        <div className="datacut-grid page-grid">
-          {cuts.map((cut) => (
-            <DatacutCard key={cut.id} cut={cut} />
-          ))}
-        </div>
-      </div>
+      <ExploreResults cuts={cuts} heading="Datacuts" />
     </section>
   );
 }

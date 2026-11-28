@@ -117,6 +117,8 @@ export interface Datacut {
   accent: string;
   art: string;
   updated: string;
+  /** ISO timestamp from datacuts.updated_at (newest sort). */
+  updatedAt: string;
   format: string;
   license: LicenseTemplate;
   licenseBlurb: string;

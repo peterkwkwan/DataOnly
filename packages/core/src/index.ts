@@ -49,6 +49,16 @@ export {
 } from "./mock-data";
 export { mockCatalog } from "./repository";
 export type { CatalogRepository } from "./repository";
+export {
+  applyExploreQuery,
+  assertExploreQuery,
+  DEFAULT_EXPLORE_SORT,
+  EXPLORE_SORT_OPTIONS,
+  EXPLORE_SORTS,
+  parseExploreQuery,
+  serializeExploreQuery,
+} from "./explore-query";
+export type { ExploreQuery, ExploreSort } from "./explore-query";
 export { hasSupabaseEnv, resolveSupabaseEnv } from "./supabase/env";
 export { createSupabaseClient } from "./supabase/client";
 export {
