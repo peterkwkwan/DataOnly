@@ -191,6 +191,7 @@ footer a {
 .detail-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 12px 18px;
   color: var(--muted);
   font-size: 14px;
