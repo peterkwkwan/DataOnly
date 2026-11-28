@@ -742,7 +742,10 @@ export function AccountPurchases({
       {!connectReady ? (
         <p className="empty-hint">Loading account…</p>
       ) : (
-        <section className="dashboard-verification-card" aria-labelledby="account-payouts-heading">
+        <section
+          className="dashboard-verification-card account-payouts-card"
+          aria-labelledby="account-payouts-heading"
+        >
           <div className="results-header dashboard-section-toolbar">
             <div>
               <h2 id="account-payouts-heading">Payouts</h2>
