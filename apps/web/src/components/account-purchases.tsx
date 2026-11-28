@@ -115,6 +115,19 @@ function paymentMethodKey(userId: string): string {
   return `dataonly.paymentMethod.${userId}`;
 }
 
+/** Client-side stand-in when help isn't a refund (API note is 500 chars + refund-only). */
+function refundRequestNoteKey(purchaseId: string): string {
+  return `dataonly.refundRequestNote.${purchaseId}`;
+}
+
+const HELP_OTHER_WORD_LIMIT = 500;
+
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
 function readDeviceCard(userId: string): DeviceCard | null {
   try {
     const raw = localStorage.getItem(paymentMethodKey(userId));
@@ -281,6 +294,7 @@ function HelpDialog({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sentAt, setSentAt] = useState<string | null>(null);
+  const [otherSaved, setOtherSaved] = useState(false);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -295,8 +309,10 @@ function HelpDialog({
   );
   const requestedWhen = formatWhen(sentAt || row.refundRequestedAt || "");
   const copy = refundBuyerCopy(input, requestedWhen === "—" ? "" : requestedWhen);
+  const otherWordCount = countWords(note);
+  const otherWordsRemaining = HELP_OTHER_WORD_LIMIT - otherWordCount;
 
-  async function submit() {
+  async function submitRefund() {
     if (note.trim().length > 500) {
       setNoteError("Keep the note under 500 characters.");
       return;
@@ -332,6 +348,30 @@ function HelpDialog({
     }
   }
 
+  function submitOther() {
+    const trimmed = note.trim();
+    if (!trimmed) {
+      setNoteError("Add a note so we know what you need.");
+      return;
+    }
+    if (countWords(trimmed) > HELP_OTHER_WORD_LIMIT) {
+      setNoteError(`Keep the note under ${HELP_OTHER_WORD_LIMIT} words.`);
+      return;
+    }
+    setNoteError(null);
+    setError(null);
+    setBusy(true);
+    try {
+      // shortcut: device-only until help notes have an API, then POST instead
+      localStorage.setItem(refundRequestNoteKey(row.id), trimmed);
+      setOtherSaved(true);
+    } catch {
+      setError("Couldn't save the note on this device.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div
       className="buy-modal-backdrop"
@@ -349,7 +389,9 @@ function HelpDialog({
           <br />
           {formatMoney(row.amountCents, row.currency)} · {formatWhen(row.createdAt)}
         </p>
-        {sentAt ? (
+        {otherSaved ? (
+          <p>Thanks — we saved your note. We&apos;ll review it.</p>
+        ) : sentAt ? (
           copy.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
         ) : (
           <>
@@ -363,10 +405,38 @@ function HelpDialog({
               onChange={setReason}
             />
             {reason === "other" ? (
-              <p>
-                Other help isn&apos;t available on this page yet. Choose I&apos;d like a refund if
-                that&apos;s what you need.
-              </p>
+              <>
+                <p>Tell us what you need help with. We&apos;ll review your note.</p>
+                <label>
+                  Additional context
+                  <textarea
+                    rows={5}
+                    value={note}
+                    onChange={(event) => {
+                      setNote(event.target.value);
+                      setNoteError(null);
+                    }}
+                  />
+                </label>
+                <p
+                  className={otherWordsRemaining < 0 ? "form-error" : "form-footnote"}
+                  aria-live="polite"
+                >
+                  {otherWordsRemaining} {otherWordsRemaining === 1 ? "word" : "words"} remaining
+                </p>
+                {noteError ? <p className="form-error">{noteError}</p> : null}
+                {error ? <p className="form-error">{error}</p> : null}
+                <div className="buy-modal-actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={busy}
+                    onClick={submitOther}
+                  >
+                    {busy ? "Sending…" : "Submit"}
+                  </button>
+                </div>
+              </>
             ) : (
               <>
                 {copy.paragraphs.map((paragraph) => (
@@ -393,7 +463,7 @@ function HelpDialog({
                       type="button"
                       className="primary-button"
                       disabled={busy}
-                      onClick={() => void submit()}
+                      onClick={() => void submitRefund()}
                     >
                       {busy ? "Sending…" : "Submit request"}
                     </button>
