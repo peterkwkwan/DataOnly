@@ -3354,7 +3354,6 @@ footer button {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
   gap: 8px 12px;
 }
 .account-profile-storefront-hint .link-button {
