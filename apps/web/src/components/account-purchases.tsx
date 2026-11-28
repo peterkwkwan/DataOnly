@@ -392,6 +392,12 @@ function PaymentMethod({ userId }: { userId: string }) {
               Remove
             </button>
           </div>
+        ) : !editing ? (
+          <div className="dashboard-section-actions">
+            <button type="button" className="primary-button small" onClick={() => setEditing(true)}>
+              Add card
+            </button>
+          </div>
         ) : null}
       </div>
       {editing ? (
@@ -453,9 +459,6 @@ function PaymentMethod({ userId }: { userId: string }) {
         <>
           <p className="empty-hint">No card saved on this device.</p>
           {error ? <p className="form-error">{error}</p> : null}
-          <button type="button" className="primary-button small" onClick={() => setEditing(true)}>
-            Add card
-          </button>
         </>
       )}
     </section>
