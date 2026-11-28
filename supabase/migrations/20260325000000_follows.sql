@@ -66,8 +66,8 @@ create trigger follows_follower_count
   after insert or delete on public.follows
   for each row execute function public.refresh_creator_follower_count();
 
--- Widen before notify_new_follower. Drop every type-in check (inline name can drift),
--- then re-add the full tip allow-list so a re-paste never narrows past expansion/save.
+-- Widen before notify_new_follower. Drop every type allow-list check (name/def can
+-- drift; pg often stores IN as ANY(ARRAY[...])), then re-add the full tip list.
 do $$
 declare
   cname text;
@@ -80,11 +80,14 @@ begin
     where nsp.nspname = 'public'
       and rel.relname = 'notifications'
       and con.contype = 'c'
-      and pg_get_constraintdef(con.oid) ~* 'type\s+in\s*\('
+      and pg_get_constraintdef(con.oid) ~* '(type\s+in\s*\(|type\s*=\s*any\s*\()'
   loop
     execute format('alter table public.notifications drop constraint %I', cname);
   end loop;
 end $$;
+
+alter table public.notifications drop constraint if exists notifications_type_check;
+alter table public.notifications drop constraint if exists notifications_type_check1;
 
 alter table public.notifications
   add constraint notifications_type_check
