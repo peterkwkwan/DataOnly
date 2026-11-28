@@ -3373,6 +3373,9 @@ footer button {
   gap: 8px;
   column-gap: 8px;
 }
+.filter-row.account-tabs {
+  border-bottom: 0;
+}
 /* Beat .filter-row button.active (0,2,1) if anything ever sets margin there */
 .dashboard-tabs > button,
 .dashboard-tabs > button.active {

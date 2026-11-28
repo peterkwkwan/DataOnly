@@ -197,7 +197,7 @@ function AccountPageContent() {
         <p>{introFor(tab)}</p>
       </div>
 
-      <div className="filter-row dashboard-tabs" role="tablist" aria-label="Account sections">
+      <div className="filter-row dashboard-tabs account-tabs" role="tablist" aria-label="Account sections">
         <button
           type="button"
           role="tab"
