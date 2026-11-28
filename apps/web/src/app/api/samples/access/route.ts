@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isDbPermissionError } from "@/lib/errors";
 import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { getAuthedRequest } from "@/lib/supabase/request-auth";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
@@ -44,6 +45,17 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (cutError) {
+    console.error("[samples/access] datacut lookup failed", cutError.message);
+    if (isDbPermissionError(cutError)) {
+      return NextResponse.json(
+        {
+          error: cutError.message,
+          code: "db_permission",
+          hint: "Paste supabase/migrations/20260324000000_service_role_datacuts_grant.sql in the Supabase SQL editor",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: cutError.message }, { status: 500 });
   }
   if (!cut) {

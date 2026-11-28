@@ -15,6 +15,7 @@ grant select, update on public.creators to service_role;
 
 grant select on public.datacuts to anon, authenticated;
 grant insert, update, delete on public.datacuts to authenticated;
+grant select, update on public.datacuts to service_role;
 grant usage, select on sequence public.datacuts_id_seq to anon, authenticated;
 
 grant select, insert, update, delete on public.saved to authenticated;

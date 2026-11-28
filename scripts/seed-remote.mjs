@@ -23,6 +23,7 @@ console.log(`DataOnly seed helper
    - supabase/migrations/20260313000000_creator_tos.sql  (profiles.tos_accepted_at + tos_version)
    - supabase/migrations/20260314000000_stripe_entitlements.sql  (Connect fields + entitlements)
    - supabase/migrations/20260318000000_service_role_creators_grant.sql  (service_role SELECT/UPDATE on creators)
+   - supabase/migrations/20260324000000_service_role_datacuts_grant.sql  (service_role SELECT/UPDATE on datacuts)
    - supabase/seed.sql
 3. Auth → URL configuration: add http://localhost:3000/auth/callback
 4. Copy Project URL + publishable key into apps/web/.env.local:

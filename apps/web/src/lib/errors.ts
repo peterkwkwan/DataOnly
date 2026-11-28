@@ -1,3 +1,13 @@
+/** PostgREST/Postgres missing table GRANT (42501) — service_role bypasses RLS, not privileges. */
+export function isDbPermissionError(
+  err: { message?: string; code?: string } | null | undefined,
+): boolean {
+  if (!err) return false;
+  if (err.code === "42501") return true;
+  const msg = typeof err.message === "string" ? err.message.toLowerCase() : "";
+  return msg.includes("permission denied");
+}
+
 /** Extract a readable message from Error, PostgREST, Auth, or plain `{ message }` throws. */
 export function formatClientError(err: unknown, fallback: string): string {
   let message = fallback;

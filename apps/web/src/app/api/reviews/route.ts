@@ -4,6 +4,7 @@ import {
   type ReviewRow,
 } from "@dataonly/core";
 import { NextResponse } from "next/server";
+import { isDbPermissionError } from "@/lib/errors";
 import { createServiceSupabaseClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { createServerSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -14,6 +15,17 @@ const LIST_LIMIT = 20;
 function unavailable() {
   return NextResponse.json(
     { error: "Supabase not configured", code: "supabase_not_configured" },
+    { status: 503 },
+  );
+}
+
+function dbPermission(message: string) {
+  return NextResponse.json(
+    {
+      error: message,
+      code: "db_permission",
+      hint: "Paste supabase/migrations/20260324000000_service_role_datacuts_grant.sql (and reviews grants if needed) in the Supabase SQL editor",
+    },
     { status: 503 },
   );
 }
@@ -50,6 +62,8 @@ export async function GET(request: Request) {
     .limit(LIST_LIMIT);
 
   if (error) {
+    console.error("[reviews] list failed", error.message);
+    if (isDbPermissionError(error)) return dbPermission(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -70,6 +84,8 @@ export async function GET(request: Request) {
       .eq("user_id", user.id)
       .maybeSingle();
     if (ownError) {
+      console.error("[reviews] mine lookup failed", ownError.message);
+      if (isDbPermissionError(ownError)) return dbPermission(ownError.message);
       return NextResponse.json({ error: ownError.message }, { status: 500 });
     }
     if (own) {
@@ -101,11 +117,17 @@ export async function GET(request: Request) {
     };
   }
 
-  const { data: cut } = await admin
+  const { data: cut, error: cutError } = await admin
     .from("datacuts")
     .select("rating, reviews")
     .eq("id", datacutId)
     .maybeSingle();
+
+  if (cutError) {
+    console.error("[reviews] datacut summary failed", cutError.message);
+    if (isDbPermissionError(cutError)) return dbPermission(cutError.message);
+    return NextResponse.json({ error: cutError.message }, { status: 500 });
+  }
 
   return NextResponse.json({
     reviews,
@@ -155,6 +177,8 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (entError) {
+    console.error("[reviews] entitlement check failed", entError.message);
+    if (isDbPermissionError(entError)) return dbPermission(entError.message);
     return NextResponse.json({ error: entError.message }, { status: 500 });
   }
   if (!entitlement || entitlement.status !== "active") {
@@ -182,14 +206,22 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    console.error("[reviews] upsert failed", error.message);
+    if (isDbPermissionError(error)) return dbPermission(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: cut } = await admin
+  const { data: cut, error: cutError } = await admin
     .from("datacuts")
     .select("rating, reviews")
     .eq("id", body.datacutId)
     .maybeSingle();
+
+  if (cutError) {
+    console.error("[reviews] datacut summary failed", cutError.message);
+    if (isDbPermissionError(cutError)) return dbPermission(cutError.message);
+    return NextResponse.json({ error: cutError.message }, { status: 500 });
+  }
 
   return NextResponse.json({
     ok: true,
@@ -256,6 +288,8 @@ export async function PATCH(request: Request) {
     .maybeSingle();
 
   if (error) {
+    console.error("[reviews] hide failed", error.message);
+    if (isDbPermissionError(error)) return dbPermission(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   if (!data) {

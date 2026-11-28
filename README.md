@@ -66,12 +66,19 @@ Do this in the [Supabase dashboard](https://supabase.com/dashboard) — this rep
    - `supabase/migrations/20260313000000_creator_tos.sql` (adds `profiles.tos_accepted_at` + `profiles.tos_version` for Creator ToS acceptance)
    - `supabase/migrations/20260314000000_stripe_entitlements.sql` (Stripe Connect fields + `entitlements` table)
    - `supabase/migrations/20260318000000_service_role_creators_grant.sql` (`service_role` SELECT/UPDATE on `creators` for checkout + Connect webhook)
+   - `supabase/migrations/20260324000000_service_role_datacuts_grant.sql` (`service_role` SELECT/UPDATE on `datacuts` for sample download + reviews summary)
    - `supabase/seed.sql` (categories / creators / datacuts from mock)
 
    **Checkout fails with `permission denied for table creators`?** Paste this (same as `20260318000000_service_role_creators_grant.sql`):
 
 ```sql
 grant select, update on public.creators to service_role;
+```
+
+   **Sample download / reviews fail with `permission denied for table datacuts`?** Paste this (same as `20260324000000_service_role_datacuts_grant.sql`):
+
+```sql
+grant select, update on public.datacuts to service_role;
 ```
 
    **Already ran init + rls once?** Paste this in SQL Editor (same as `20260311000002_grants.sql`) — do not re-run full init:
@@ -91,6 +98,7 @@ grant select, update on public.creators to service_role;
 
 grant select on public.datacuts to anon, authenticated;
 grant insert, update, delete on public.datacuts to authenticated;
+grant select, update on public.datacuts to service_role;
 grant usage, select on sequence public.datacuts_id_seq to anon, authenticated;
 
 grant select, insert, update, delete on public.saved to authenticated;
