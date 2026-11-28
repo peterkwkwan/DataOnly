@@ -209,9 +209,7 @@ export function DatacutReviews({
             ) : null}
           </div>
         </div>
-      ) : (
-        <p className="empty-hint">Buy to leave a rating.</p>
-      )}
+      ) : null}
 
       {error ? <p className="form-error">{error}</p> : null}
 
